@@ -1,6 +1,18 @@
 import type { Message } from "../types";
+import { rateLimitMessage } from "@/features/shared/rate-limit";
 
 export class MessageSessionExpiredError extends Error {}
+
+export async function deleteMyMessage(id: number, signal: AbortSignal): Promise<"deleted" | "missing"> {
+  const response = await fetch(`http://localhost:3000/api/messages/${id}`, {
+    method: "DELETE", credentials: "include", signal,
+  });
+  if (response.status === 401) throw new MessageSessionExpiredError();
+  if (response.status === 429) throw new Error(rateLimitMessage(response));
+  if (response.status === 404) return "missing";
+  if (response.status !== 204) throw new Error("تعذّر حذف الرسالة. حاول مرة ثانية.");
+  return "deleted";
+}
 
 function isMessage(value: unknown): value is Message {
   if (!value || typeof value !== "object") return false;

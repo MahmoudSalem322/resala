@@ -1,302 +1,348 @@
 {
-  "info": {
-    "_postman_id": "f39b6073-f1cf-404e-80b2-348eee31c185",
-    "name": "Fullstack Practice",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Register ثم Login ثم Current user أو Create message. التوكن محفوظ في HttpOnly Cookie ويرسل تلقائيًا عبر Cookie Jar. Current user يعيد بيانات الحساب والمدة المتبقية. لا يوجد Refresh Token."
-  },
-  "auth": {
-    "type": "noauth"
-  },
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:3000",
-      "type": "string"
-    },
-    {
-      "key": "name",
-      "value": "مستخدم بوستمان",
-      "type": "string"
-    },
-    {
-      "key": "email",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "password",
-      "value": "Practice123!",
-      "type": "string"
-    },
-    {
-      "key": "message",
-      "value": "مرحبًا من Postman!",
-      "type": "string"
-    }
-  ],
-  "item": [
-    {
-      "name": "Auth",
-      "item": [
-        {
-          "name": "01 - Register",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (!pm.collectionVariables.get(\"email\")) {",
-                  "  pm.collectionVariables.set(\"email\", \"practice-\" + Date.now() + \"@example.com\");",
-                  "}"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 201\", () => pm.expect(pm.response.code).to.eql(201));",
-                  "const body = pm.response.json();",
-                  "pm.test(\"Account created without password fields\", () => {",
-                  "  pm.expect(body.success).to.eql(true);",
-                  "  pm.expect(typeof body.data.id).to.eql(\"number\");",
-                  "  pm.expect(Object.hasOwn(body.data, \"password\")).to.eql(false);",
-                  "  pm.expect(Object.hasOwn(body.data, \"password_hash\")).to.eql(false);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "auth": {
-              "type": "noauth"
-            },
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"{{name}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "register"
-              ]
-            },
-            "description": "إنشاء حساب جديد. يرجع 201 عند النجاح، أو 400 لبيانات غير صالحة، أو 409 إذا الإيميل مستخدم. إذا متغير email فارغ يتم توليد إيميل تجريبي تلقائيًا. لتكرار التسجيل بحساب جديد امسح قيمة email ثم أرسل الطلب."
-          },
-          "response": []
-        },
-        {
-          "name": "02 - Login",
-          "event": [
-            {
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const body = pm.response.json();",
-                  "pm.test(\"Login succeeds with HttpOnly cookie\", () => {",
-                  "  pm.expect(pm.response.code).to.eql(200);",
-                  "  pm.expect(body.success).to.eql(true);",
-                  "  pm.expect(typeof body.data.user.id).to.eql(\"number\");",
-                  "  pm.expect(body.data.expiresIn).to.eql(900);",
-                  "  pm.expect(Object.hasOwn(body.data, \"accessToken\")).to.eql(false);",
-                  "  pm.expect(pm.response.headers.get(\"Set-Cookie\")).to.include(\"HttpOnly\");",
-                  "});"
-                ]
-              },
-              "listen": "test"
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "auth": {
-              "type": "noauth"
-            },
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "login"
-              ]
-            },
-            "description": "يرجع بيانات المستخدم ويضع access_token في HttpOnly Cookie لمدة 15 دقيقة. فعّل Cookie Jar واستخدم نفس host لكل الطلبات."
-          },
-          "response": []
-        },
-        {
-          "name": "04 - Logout",
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "description": "يمسح Cookie الدخول.",
-            "method": "POST",
-            "url": "{{baseUrl}}/api/auth/logout"
-          },
-          "response": []
-        },
-        {
-          "name": "05 - Current user",
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "description": "استرجاع الحساب والمدة المتبقية من Cookie. يرجع 401 بدون جلسة صالحة.",
-            "url": "{{baseUrl}}/api/auth/me",
-            "method": "GET"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Session restored\", () => {",
-                  "  pm.expect(pm.response.code).to.eql(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.success).to.eql(true);",
-                  "  pm.expect(typeof body.data.user.id).to.eql(\"number\");",
-                  "  pm.expect(body.data.expiresIn).to.be.above(0);",
-                  "  pm.expect(body.data.expiresIn).to.be.at.most(900);",
-                  "  pm.expect(pm.response.headers.get(\"Cache-Control\")).to.eql(\"no-store\");",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Messages",
-      "item": [
-        {
-          "name": "03 - Create message",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 201\", () => pm.expect(pm.response.code).to.eql(201));",
-                  "const body = pm.response.json();",
-                  "pm.test(\"Message persisted with ID and timestamp\", () => {",
-                  "  pm.expect(body.success).to.eql(true);",
-                  "  pm.expect(typeof body.data.id).to.eql(\"number\");",
-                  "  pm.expect(typeof body.data.created_at).to.eql(\"string\");",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"message\":\"{{message}}\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/messages",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "messages"
-              ]
-            },
-            "description": "يتطلب Cookie الدخول التي يحفظها Postman تلقائيًا. الرسالة مطلوبة وبحد أقصى 5000 حرف.",
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "06 - My messages",
-          "request": {
-            "description": "يرجع رسائل الحساب المسجّل فقط، بالأحدث أولًا. رقم المستخدم يؤخذ من Cookie ولا يرسل مع الطلب. يرجع data فارغة إذا لم توجد رسائل، و401 بدون جلسة صالحة.",
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "GET",
-            "url": "{{baseUrl}}/api/messages"
-          },
-          "event": [
-            {
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"My messages returned\", () => {",
-                  "  pm.expect(pm.response.code).to.eql(200);",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.success).to.eql(true);",
-                  "  pm.expect(body.data).to.be.an(\"array\");",
-                  "  body.data.forEach(item => {",
-                  "    pm.expect(item).to.have.all.keys(\"id\", \"message\", \"created_at\");",
-                  "    pm.expect(item.id).to.be.a(\"number\");",
-                  "    pm.expect(item.message).to.be.a(\"string\");",
-                  "  });",
-                  "  pm.expect(pm.response.headers.get(\"Cache-Control\")).to.eql(\"no-store\");",
-                  "});"
-                ]
-              },
-              "listen": "test"
-            }
-          ],
-          "response": []
-        }
-      ]
-    }
-  ]
+    "info":  {
+                 "_postman_id":  "f39b6073-f1cf-404e-80b2-348eee31c185",
+                 "name":  "Fullstack Practice",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+                 "description":  "Register ثم Login ثم Current user أو Create message. التوكن محفوظ في HttpOnly Cookie ويرسل تلقائيًا عبر Cookie Jar. Current user يعيد بيانات الحساب والمدة المتبقية. لا يوجد Refresh Token."
+             },
+    "auth":  {
+                 "type":  "noauth"
+             },
+    "variable":  [
+                     {
+                         "key":  "baseUrl",
+                         "value":  "http://localhost:3000",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "name",
+                         "value":  "مستخدم بوستمان",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "email",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "password",
+                         "value":  "Practice123!",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "message",
+                         "value":  "مرحبًا من Postman!",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "messageId",
+                         "value":  "",
+                         "type":  "string"
+                     }
+                 ],
+    "item":  [
+                 {
+                     "name":  "Auth",
+                     "item":  [
+                                  {
+                                      "name":  "01 - Register",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "prerequest",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "if (!pm.collectionVariables.get(\"email\")) {",
+                                                                                    "  pm.collectionVariables.set(\"email\", \"practice-\" + Date.now() + \"@example.com\");",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    },
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Status is 201\", () =\u003e pm.expect(pm.response.code).to.eql(201));",
+                                                                                    "const body = pm.response.json();",
+                                                                                    "pm.test(\"Account created without password fields\", () =\u003e {",
+                                                                                    "  pm.expect(body.success).to.eql(true);",
+                                                                                    "  pm.expect(typeof body.data.id).to.eql(\"number\");",
+                                                                                    "  pm.expect(Object.hasOwn(body.data, \"password\")).to.eql(false);",
+                                                                                    "  pm.expect(Object.hasOwn(body.data, \"password_hash\")).to.eql(false);",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"name\": \"{{name}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/auth/register",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "auth",
+                                                                               "register"
+                                                                           ]
+                                                              },
+                                                      "description":  "إنشاء حساب جديد. يرجع 201 عند النجاح، أو 400 لبيانات غير صالحة، أو 409 إذا الإيميل مستخدم. إذا متغير email فارغ يتم توليد إيميل تجريبي تلقائيًا. لتكرار التسجيل بحساب جديد امسح قيمة email ثم أرسل الطلب."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "02 - Login",
+                                      "event":  [
+                                                    {
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const body = pm.response.json();",
+                                                                                    "pm.test(\"Login succeeds with HttpOnly cookie\", () =\u003e {",
+                                                                                    "  pm.expect(pm.response.code).to.eql(200);",
+                                                                                    "  pm.expect(body.success).to.eql(true);",
+                                                                                    "  pm.expect(typeof body.data.user.id).to.eql(\"number\");",
+                                                                                    "  pm.expect(body.data.expiresIn).to.eql(900);",
+                                                                                    "  pm.expect(Object.hasOwn(body.data, \"accessToken\")).to.eql(false);",
+                                                                                    "  pm.expect(pm.response.headers.get(\"Set-Cookie\")).to.include(\"HttpOnly\");",
+                                                                                    "});"
+                                                                                ]
+                                                                   },
+                                                        "listen":  "test"
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/auth/login",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "auth",
+                                                                               "login"
+                                                                           ]
+                                                              },
+                                                      "description":  "يرجع بيانات المستخدم ويضع access_token في HttpOnly Cookie لمدة 15 دقيقة. فعّل Cookie Jar واستخدم نفس host لكل الطلبات."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "04 - Logout",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "description":  "يمسح Cookie الدخول.",
+                                                      "method":  "POST",
+                                                      "url":  "{{baseUrl}}/api/auth/logout"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "05 - Current user",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "description":  "استرجاع الحساب والمدة المتبقية من Cookie. يرجع 401 بدون جلسة صالحة.",
+                                                      "url":  "{{baseUrl}}/api/auth/me",
+                                                      "method":  "GET"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Session restored\", () =\u003e {",
+                                                                                    "  pm.expect(pm.response.code).to.eql(200);",
+                                                                                    "  const body = pm.response.json();",
+                                                                                    "  pm.expect(body.success).to.eql(true);",
+                                                                                    "  pm.expect(typeof body.data.user.id).to.eql(\"number\");",
+                                                                                    "  pm.expect(body.data.expiresIn).to.be.above(0);",
+                                                                                    "  pm.expect(body.data.expiresIn).to.be.at.most(900);",
+                                                                                    "  pm.expect(pm.response.headers.get(\"Cache-Control\")).to.eql(\"no-store\");",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Messages",
+                     "item":  [
+                                  {
+                                      "name":  "03 - Create message",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Status is 201\", () =\u003e pm.expect(pm.response.code).to.eql(201));",
+                                                                                    "const body = pm.response.json();",
+                                                                                    "pm.test(\"Message persisted with ID and timestamp\", () =\u003e {",
+                                                                                    "  pm.expect(body.success).to.eql(true);",
+                                                                                    "  pm.expect(typeof body.data.id).to.eql(\"number\");",
+                                                                                    "  pm.expect(typeof body.data.created_at).to.eql(\"string\");",
+                                                                                    "});",
+                                                                                    "if (pm.response.code === 201 \u0026\u0026 body.success === true) pm.collectionVariables.set(\"messageId\", body.data.id);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\"message\":\"{{message}}\"}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/messages",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "messages"
+                                                                           ]
+                                                              },
+                                                      "description":  "يتطلب Cookie الدخول التي يحفظها Postman تلقائيًا. الرسالة مطلوبة وبحد أقصى 5000 حرف.",
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               }
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "06 - My messages",
+                                      "request":  {
+                                                      "description":  "يرجع رسائل الحساب المسجّل فقط، بالأحدث أولًا. رقم المستخدم يؤخذ من Cookie ولا يرسل مع الطلب. يرجع data فارغة إذا لم توجد رسائل، و401 بدون جلسة صالحة.",
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/messages"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"My messages returned\", () =\u003e {",
+                                                                                    "  pm.expect(pm.response.code).to.eql(200);",
+                                                                                    "  const body = pm.response.json();",
+                                                                                    "  pm.expect(body.success).to.eql(true);",
+                                                                                    "  pm.expect(body.data).to.be.an(\"array\");",
+                                                                                    "  body.data.forEach(item =\u003e {",
+                                                                                    "    pm.expect(item).to.have.all.keys(\"id\", \"message\", \"created_at\");",
+                                                                                    "    pm.expect(item.id).to.be.a(\"number\");",
+                                                                                    "    pm.expect(item.message).to.be.a(\"string\");",
+                                                                                    "  });",
+                                                                                    "  pm.expect(pm.response.headers.get(\"Cache-Control\")).to.eql(\"no-store\");",
+                                                                                    "});"
+                                                                                ]
+                                                                   },
+                                                        "listen":  "test"
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "07 - Delete my message",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{baseUrl}}/api/messages/{{messageId}}",
+                                                      "description":  "يحذف الرسالة التي أنشأها الحساب المسجّل فقط. ينفذ حذفًا نهائيًا. messageId يحفظه طلب Create message، ويمكن تغييره لرسالة تجريبية تملكها. يرجع 204، أو404 للرسالة المفقودة أو التي لا تملكها، و400 للرقم غير الصالح، و401 بدون جلسة، و429 بعد تجاوز 30 طلبًا بالدقيقة.",
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Message deleted\", () =\u003e {",
+                                                                                    "  pm.expect(pm.response.code).to.eql(204);",
+                                                                                    "  pm.expect(pm.response.text()).to.eql(\"\");",
+                                                                                    "});"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   },
+                                                        "listen":  "test"
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 }
+             ]
 }

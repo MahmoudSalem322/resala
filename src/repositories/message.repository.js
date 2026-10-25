@@ -22,4 +22,12 @@ async function listMessages(userId) {
   return result.rows;
 }
 
-module.exports = { createMessage, listMessages };
+async function deleteMessage({ id, userId }) {
+  const result = await pool.query(
+    "DELETE FROM public.messages WHERE id = $1 AND user_id = $2 RETURNING id",
+    [id, userId],
+  );
+  return result.rowCount > 0;
+}
+
+module.exports = { createMessage, listMessages, deleteMessage };

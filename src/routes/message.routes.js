@@ -11,4 +11,9 @@ router.get("/", (req, res, next) => {
   next();
 }, requireAuth, messageController.listMessages);
 
+router.delete("/:id", (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+}, requireAuth, limits.deleteMessage, messageController.deleteMessage);
+
 module.exports = router;

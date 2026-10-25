@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Message } from "../types";
 import styles from "../my-messages.module.css";
 import { useAuth } from "@/features/auth/components/auth-provider";
 import { getMyMessages, MessageSessionExpiredError } from "../services/messages-api";
+import DeleteMessageDialog from "./delete-message-dialog";
 
 const dateFormat = new Intl.DateTimeFormat("ar", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Hebron" });
 const timeFormat = new Intl.DateTimeFormat("ar", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Hebron" });
@@ -47,12 +48,16 @@ function AccountMessages() {
     <div className={styles.list} aria-hidden="true">{[1, 2, 3].map((id) => <div key={id} className={`${styles.card} ${styles.skeletonCard}`}><div className={styles.skeleton} /><div className={styles.skeleton} /><div className={styles.skeleton} /></div>)}</div>
   </MessagesNotice>;
   if (result.status === "error") return <MessagesNotice><h2>ما قدرنا نحمّل رسائلك</h2><p role="alert">{result.message}</p><button className={styles.emptyAction} type="button" onClick={() => { setResult({ status: "loading" }); setAttempt((value) => value + 1); }}>حاول مرة ثانية</button></MessagesNotice>;
-  return <MessagesView messages={result.messages} />;
+  return <MessagesView messages={result.messages} onDelete={(id) => setResult((current) =>
+    current.status === "success" ? { ...current, messages: current.messages.filter((message) => message.id !== id) } : current)} />;
 }
 
-function MessagesView({ messages }: { messages: Message[] }) {
+function MessagesView({ messages, onDelete }: { messages: Message[]; onDelete: (id: number) => void }) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
+  const [selected, setSelected] = useState<Message | null>(null);
+  const [notice, setNotice] = useState("");
+  const heading = useRef<HTMLHeadingElement>(null);
   const filtered = messages.filter((item) => item.message.includes(search.trim())).sort((a, b) =>
     sort === "newest" ? Date.parse(b.created_at) - Date.parse(a.created_at) || b.id - a.id : Date.parse(a.created_at) - Date.parse(b.created_at) || a.id - b.id);
 
@@ -68,7 +73,7 @@ function MessagesView({ messages }: { messages: Message[] }) {
       </div>
       <section className={styles.collection} aria-labelledby="my-messages-title">
         <div className={styles.collectionHeading}>
-          <div className={styles.titleRow}><h2 id="my-messages-title">رسائلي</h2><span className={styles.count}>{messages.length}</span></div>
+          <div className={styles.titleRow}><h2 ref={heading} tabIndex={-1} id="my-messages-title">رسائلي</h2><span className={styles.count}>{messages.length}</span></div>
           <span className={styles.sectionNumber} dir="ltr">02 / MY WORDS</span>
         </div>
         <div className={styles.toolbar}>
@@ -85,6 +90,7 @@ function MessagesView({ messages }: { messages: Message[] }) {
           </div>
         </div>
         <p className={styles.results} role="status">{search.trim() ? `نتائج البحث: ${filtered.length}` : `عدد الرسائل: ${messages.length}`}</p>
+        {notice && <p role="status" className={styles.deleteNotice}>{notice}</p>}
         {filtered.length ? (
           <ul className={styles.list}>
             {filtered.map((item) => (
@@ -92,6 +98,7 @@ function MessagesView({ messages }: { messages: Message[] }) {
                 <div className={styles.cardTop}><span className={styles.noteIcon} aria-hidden="true">↗</span><span>رسالة <bdi>#{String(item.id).padStart(2, "0")}</bdi></span></div>
                 <p className={styles.message} dir="auto">{item.message}</p>
                 <div className={styles.cardFooter}><time dateTime={item.created_at}>{dateFormat.format(new Date(item.created_at))}</time><span>{timeFormat.format(new Date(item.created_at))}</span></div>
+                <button className={styles.deleteButton} type="button" aria-label={`حذف الرسالة رقم ${item.id}`} onClick={() => { setNotice(""); setSelected(item); }}>حذف الرسالة <span aria-hidden="true">×</span></button>
               </article></li>
             ))}
           </ul>
@@ -105,6 +112,12 @@ function MessagesView({ messages }: { messages: Message[] }) {
         )}
       </section>
       <p className={styles.endnote}>كلمات بسيطة، بتترك أثر. <span aria-hidden="true">✳</span></p>
+      {selected && <DeleteMessageDialog message={selected} onDismiss={() => setSelected(null)} onDeleted={(id, outcome) => {
+        onDelete(id);
+        setSelected(null);
+        setNotice(outcome === "deleted" ? "تم حذف الرسالة." : "الرسالة مش موجودة بالفعل، حدّثنا القائمة.");
+        requestAnimationFrame(() => heading.current?.focus());
+      }} />}
     </main>
   );
 }

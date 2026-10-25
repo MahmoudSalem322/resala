@@ -16,4 +16,9 @@ async function listMessages(req, res) {
   res.json({ success: true, data });
 }
 
-module.exports = { createMessage, listMessages };
+async function deleteMessage(req, res) {
+  await messageService.deleteMessage({ id: req.params.id, userId: req.user.id });
+  res.status(204).end();
+}
+
+module.exports = { createMessage, listMessages, deleteMessage };
