@@ -1,0 +1,246 @@
+{
+  "info": {
+    "_postman_id": "f39b6073-f1cf-404e-80b2-348eee31c185",
+    "name": "Fullstack Practice",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "الـEndpoints المنفذة فعليًا في مشروع Fullstack Practice. شغّل Express وPostgreSQL، ثم أرسل Register ثم Login ثم Create message. المتغيرات داخل Collection Variables. accessToken فارغ في الملف ويحفظ محليًا بعد الدخول فقط. لا يوجد GET messages أو logout أو refresh أو مسار محمي بعد."
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "name",
+      "value": "مستخدم بوستمان",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "Practice123!",
+      "type": "string"
+    },
+    {
+      "key": "message",
+      "value": "مرحبًا من Postman!",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "01 - Register",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"email\")) {",
+                  "  pm.collectionVariables.set(\"email\", \"practice-\" + Date.now() + \"@example.com\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.expect(pm.response.code).to.eql(201));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Account created without password fields\", () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(typeof body.data.id).to.eql(\"number\");",
+                  "  pm.expect(Object.hasOwn(body.data, \"password\")).to.eql(false);",
+                  "  pm.expect(Object.hasOwn(body.data, \"password_hash\")).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{name}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "إنشاء حساب جديد. يرجع 201 عند النجاح، أو 400 لبيانات غير صالحة، أو 409 إذا الإيميل مستخدم. إذا متغير email فارغ يتم توليد إيميل تجريبي تلقائيًا. لتكرار التسجيل بحساب جديد امسح قيمة email ثم أرسل الطلب."
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Login",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset(\"accessToken\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (pm.response.code === 200 && body.success === true && typeof body.data?.accessToken === \"string\") {",
+                  "  pm.collectionVariables.set(\"accessToken\", body.data.accessToken);",
+                  "} else {",
+                  "  pm.collectionVariables.unset(\"accessToken\");",
+                  "}",
+                  "pm.test(\"Status is 200\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test(\"Login returns user and access token\", () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(typeof body.data.user.id).to.eql(\"number\");",
+                  "  pm.expect(typeof body.data.accessToken).to.eql(\"string\");",
+                  "  pm.expect(body.data.tokenType).to.eql(\"Bearer\");",
+                  "  pm.expect(body.data.expiresIn).to.eql(900);",
+                  "  pm.expect(Object.hasOwn(body.data.user, \"password\")).to.eql(false);",
+                  "  pm.expect(Object.hasOwn(body.data.user, \"password_hash\")).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "دخول بحساب موجود. استخدم نفس email وpassword من طلب التسجيل. عند نجاح الدخول يتم حفظ JWT تلقائيًا في متغير accessToken داخل المجموعة. يرجع 200 للنجاح، 400 لبيانات غير صالحة، أو 401 لبيانات دخول غير صحيحة. لا توجد مسارات محمية حاليًا؛ سنستخدم المتغير عند إضافتها."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Messages",
+      "item": [
+        {
+          "name": "03 - Create message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.expect(pm.response.code).to.eql(201));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Message persisted with ID and timestamp\", () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(typeof body.data.id).to.eql(\"number\");",
+                  "  pm.expect(typeof body.data.created_at).to.eql(\"string\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{name}}\",\n  \"message\": \"{{message}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages"
+              ]
+            },
+            "description": "حفظ رسالة. يرجع 201 مع السجل المحفوظ. هذا المسار مفتوح حاليًا ولا يتطلب Token. Validation الرسائل وGET لعرضها لم يضافا بعد."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
