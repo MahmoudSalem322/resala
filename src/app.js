@@ -9,6 +9,7 @@ const app = express();
 app.use(cors({
   origin: "http://localhost:3001",
   credentials: true,
+  exposedHeaders: ["Retry-After", "RateLimit", "RateLimit-Policy"],
 }));
 // Cookies are sent automatically, so reject writes from other browser origins.
 app.use((req, res, next) => {

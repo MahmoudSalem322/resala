@@ -1,4 +1,5 @@
 import type { LoginPayload, LoginResult, RegisterPayload } from "../types";
+import { rateLimitMessage } from "@/features/shared/rate-limit";
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -16,6 +17,8 @@ async function postAuth(path: "register" | "login", payload: RegisterPayload | L
   } catch {
     throw new Error("تعذّر الاتصال بالسيرفر. حاول مرة ثانية.");
   }
+
+  if (response.status === 429) throw new Error(rateLimitMessage(response));
 
   if (response.status === 404) {
     throw new Error("خدمة الحسابات غير متاحة حاليًا. حاول لاحقًا.");

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import MessageFeedback from "./message-feedback";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/components/auth-provider";
+import { rateLimitMessage } from "@/features/shared/rate-limit";
 
 export default function MessageForm() {
   const { session, signOut, isRestoring } = useAuth();
@@ -36,6 +37,10 @@ export default function MessageForm() {
         body: JSON.stringify(payload),
       });
 
+      if (response.status === 429) {
+        setFeedback({ type: "error", message: rateLimitMessage(response) });
+        return;
+      }
       if (response.status === 401) {
         signOut();
         setFeedback({ type: "error", message: "انتهت جلسة الدخول. سجّل دخولك من جديد." });
