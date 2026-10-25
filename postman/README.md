@@ -1,27 +1,16 @@
 # Fullstack Practice — Postman
 
-## الاستيراد
+استورد Fullstack-Practice.postman_collection.json وشغّل Express على http://localhost:3000 وPostgreSQL.
 
-1. في Postman اضغط Import واختر `Fullstack-Practice.postman_collection.json`.
-2. شغّل Express على `http://localhost:3000` وتأكد أن PostgreSQL شغّال. لا تحتاج تشغيل Next.js لفحص الـAPI من Postman.
-3. افتح Collection Variables لتعديل القيم التجريبية عند الحاجة.
+1. Register: أنشئ حسابًا. تكرار البريد يرجع 409.
+2. Login: استخدم نفس الحساب. الرد يحتوي بيانات المستخدم وexpiresIn فقط، ويحفظ Postman التوكن تلقائيًا في Cookie Jar.
+3. Create message: يرسل Postman Cookie تلقائيًا. لا تضف Bearer Token. استخدم نفس host في جميع الطلبات.
+4. Logout: يمسح Cookie الدخول. إرسال رسالة بعدها يرجع 401.
 
-## الطلبات الجاهزة
+Cookie باسم access_token، مدتها 900 ثانية، HttpOnly وSameSite=Strict وPath=/api. في production تستخدم Secure وتتطلب HTTPS.
+لا يحتوي الملف على Cookie فعلية أو كلمة مرور السيرفر. إنشاء الحساب وإرسال الرسالة يحفظان بيانات فعلية.
 
-| الطلب | المسار | النجاح |
-| --- | --- | --- |
-| Register | `POST /api/auth/register` | `201` |
-| Login | `POST /api/auth/login` | `200` |
-| Create message | `POST /api/messages` | `201` |
+الواجهة تستخدم credentials: include مع طلبات الدخول والرسائل والخروج. يسمح السيرفر بأصل الواجهة http://localhost:3001 ويرفض عمليات الكتابة من أصول أخرى.
+GET /api/auth/me يسترجع المستخدم من Cookie ويرجع بياناته والمدة المتبقية دون تجديدها. نفّذه بعد Login، وبعد Logout تتوقع 401. الواجهة تستدعيه عند فتح الصفحة لاسترجاع الدخول بعد الرفرش. لا يوجد Refresh Token بعد.
 
-ابدأ Register ثم Login. إذا `email` فارغ، طلب التسجيل يولّد قيمة تجريبية ويحفظها في متغير المجموعة حتى يستخدمها طلب Login.
-لو كررت Register بنفس الإيميل، النتيجة المتوقعة `409` وفحص النجاح سيظهر فاشلًا. امسح قيمة `email` لإنشاء حساب جديد، أو انتقل إلى Login لاستخدام الموجود.
-
-بعد نجاح Login، سكربت Post-response يحفظ JWT في `accessToken`. قبل محاولة دخول جديدة يمسح التوكن السابق حتى لا تستخدم توكنًا قديمًا بعد محاولة فاشلة.
-قيمة Token في الملف المرفق فارغة، وبيانات الحساب مجرد أمثلة تدريبية. لا يحتوي الملف على بيانات `.env` أو Secret السيرفر.
-
-طلب الرسائل مفتوح حاليًا ولا يرسل Authorization. عند إضافة مسارات محمية، نضبط Bearer Token على `{{accessToken}}` لهذه الطلبات فقط.
-Postman لا يطبق CORS مثل المتصفح، لذلك فحص CORS من المتصفح يبقى مستقلًا.
-
-كل طلب يحتوي فحوصات تلقائية لحالة النجاح وشكل الاستجابة. إنشاء الحساب وإرسال الرسالة يحفظان بيانات فعلية في قاعدة المشروع.
-نحدّث نفس ملف المجموعة عند إضافة أي Endpoint جديد.
+الفحص العملي: node scripts/test-message-auth.js. ينشئ حسابًا ورسائل مؤقتة ويحذفها بعد الفحص.

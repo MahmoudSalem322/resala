@@ -3,7 +3,7 @@
     "_postman_id": "f39b6073-f1cf-404e-80b2-348eee31c185",
     "name": "Fullstack Practice",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "الـEndpoints المنفذة فعليًا في مشروع Fullstack Practice. شغّل Express وPostgreSQL، ثم أرسل Register ثم Login ثم Create message. المتغيرات داخل Collection Variables. accessToken فارغ في الملف ويحفظ محليًا بعد الدخول فقط. لا يوجد GET messages أو logout أو refresh أو مسار محمي بعد."
+    "description": "Register ثم Login ثم Current user أو Create message. التوكن محفوظ في HttpOnly Cookie ويرسل تلقائيًا عبر Cookie Jar. Current user يعيد بيانات الحساب والمدة المتبقية. لا يوجد Refresh Token."
   },
   "auth": {
     "type": "noauth"
@@ -32,11 +32,6 @@
     {
       "key": "message",
       "value": "مرحبًا من Postman!",
-      "type": "string"
-    },
-    {
-      "key": "accessToken",
-      "value": "",
       "type": "string"
     }
   ],
@@ -114,37 +109,21 @@
           "name": "02 - Login",
           "event": [
             {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.collectionVariables.unset(\"accessToken\");"
-                ]
-              }
-            },
-            {
-              "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "const body = pm.response.json();",
-                  "if (pm.response.code === 200 && body.success === true && typeof body.data?.accessToken === \"string\") {",
-                  "  pm.collectionVariables.set(\"accessToken\", body.data.accessToken);",
-                  "} else {",
-                  "  pm.collectionVariables.unset(\"accessToken\");",
-                  "}",
-                  "pm.test(\"Status is 200\", () => pm.expect(pm.response.code).to.eql(200));",
-                  "pm.test(\"Login returns user and access token\", () => {",
+                  "pm.test(\"Login succeeds with HttpOnly cookie\", () => {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
                   "  pm.expect(body.success).to.eql(true);",
                   "  pm.expect(typeof body.data.user.id).to.eql(\"number\");",
-                  "  pm.expect(typeof body.data.accessToken).to.eql(\"string\");",
-                  "  pm.expect(body.data.tokenType).to.eql(\"Bearer\");",
                   "  pm.expect(body.data.expiresIn).to.eql(900);",
-                  "  pm.expect(Object.hasOwn(body.data.user, \"password\")).to.eql(false);",
-                  "  pm.expect(Object.hasOwn(body.data.user, \"password_hash\")).to.eql(false);",
+                  "  pm.expect(Object.hasOwn(body.data, \"accessToken\")).to.eql(false);",
+                  "  pm.expect(pm.response.headers.get(\"Set-Cookie\")).to.include(\"HttpOnly\");",
                   "});"
                 ]
-              }
+              },
+              "listen": "test"
             }
           ],
           "request": {
@@ -178,8 +157,51 @@
                 "login"
               ]
             },
-            "description": "دخول بحساب موجود. استخدم نفس email وpassword من طلب التسجيل. عند نجاح الدخول يتم حفظ JWT تلقائيًا في متغير accessToken داخل المجموعة. يرجع 200 للنجاح، 400 لبيانات غير صالحة، أو 401 لبيانات دخول غير صحيحة. لا توجد مسارات محمية حاليًا؛ سنستخدم المتغير عند إضافتها."
+            "description": "يرجع بيانات المستخدم ويضع access_token في HttpOnly Cookie لمدة 15 دقيقة. فعّل Cookie Jar واستخدم نفس host لكل الطلبات."
           },
+          "response": []
+        },
+        {
+          "name": "04 - Logout",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "يمسح Cookie الدخول.",
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/logout"
+          },
+          "response": []
+        },
+        {
+          "name": "05 - Current user",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "استرجاع الحساب والمدة المتبقية من Cookie. يرجع 401 بدون جلسة صالحة.",
+            "url": "{{baseUrl}}/api/auth/me",
+            "method": "GET"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Session restored\", () => {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(typeof body.data.user.id).to.eql(\"number\");",
+                  "  pm.expect(body.data.expiresIn).to.be.above(0);",
+                  "  pm.expect(body.data.expiresIn).to.be.at.most(900);",
+                  "  pm.expect(pm.response.headers.get(\"Cache-Control\")).to.eql(\"no-store\");",
+                  "});"
+                ]
+              }
+            }
+          ],
           "response": []
         }
       ]
@@ -208,9 +230,6 @@
           ],
           "request": {
             "method": "POST",
-            "auth": {
-              "type": "noauth"
-            },
             "header": [
               {
                 "key": "Content-Type",
@@ -219,7 +238,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"{{name}}\",\n  \"message\": \"{{message}}\"\n}",
+              "raw": "{\"message\":\"{{message}}\"}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -236,7 +255,10 @@
                 "messages"
               ]
             },
-            "description": "حفظ رسالة. يرجع 201 مع السجل المحفوظ. هذا المسار مفتوح حاليًا ولا يتطلب Token. Validation الرسائل وGET لعرضها لم يضافا بعد."
+            "description": "يتطلب Cookie الدخول التي يحفظها Postman تلقائيًا. الرسالة مطلوبة وبحد أقصى 5000 حرف.",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "response": []
         }
