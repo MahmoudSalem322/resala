@@ -17,7 +17,5 @@ export type AuthUser = {
 
 export type LoginResult = {
   user: AuthUser;
-  accessToken: string;
-  tokenType: "Bearer";
   expiresIn: number;
 };

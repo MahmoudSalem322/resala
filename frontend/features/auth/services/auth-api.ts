@@ -9,6 +9,7 @@ async function postAuth(path: "register" | "login", payload: RegisterPayload | L
   try {
     response = await fetch(`http://localhost:3000/api/auth/${path}`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
@@ -41,13 +42,15 @@ export async function registerUser(payload: RegisterPayload): Promise<void> {
 
 export async function loginUser(payload: LoginPayload): Promise<LoginResult> {
   const result = await postAuth("login", payload);
-  const data = result.data;
+  return parseSession(result.data);
+}
+
+function parseSession(data: unknown): LoginResult {
   const user = isObject(data) ? data.user : null;
 
   if (
     !isObject(data) || !isObject(user) ||
-    typeof data.accessToken !== "string" || !data.accessToken ||
-    data.tokenType !== "Bearer" || typeof data.expiresIn !== "number" ||
+    typeof data.expiresIn !== "number" ||
     !Number.isFinite(data.expiresIn) || data.expiresIn <= 0 ||
     typeof user.id !== "number" || !Number.isInteger(user.id) || user.id <= 0 ||
     typeof user.name !== "string" || typeof user.email !== "string" ||
@@ -58,8 +61,25 @@ export async function loginUser(payload: LoginPayload): Promise<LoginResult> {
 
   return {
     user: { id: user.id, name: user.name, email: user.email, created_at: user.created_at },
-    accessToken: data.accessToken,
-    tokenType: "Bearer",
     expiresIn: data.expiresIn,
   };
+}
+
+export async function getCurrentUser(signal: AbortSignal): Promise<LoginResult | null> {
+  const response = await fetch("http://localhost:3000/api/auth/me", {
+    credentials: "include", cache: "no-store", signal,
+  });
+  if (response.status === 401) return null;
+  const result: unknown = await response.json().catch(() => null);
+  if (!response.ok || !isObject(result) || result.success !== true) {
+    throw new Error("تعذّر استرجاع جلسة الدخول. حاول مرة ثانية.");
+  }
+  return parseSession(result.data);
+}
+
+export async function logoutUser(): Promise<void> {
+  const response = await fetch("http://localhost:3000/api/auth/logout", {
+    method: "POST", credentials: "include",
+  });
+  if (!response.ok) throw new Error("تعذّر تسجيل الخروج. حاول مرة ثانية.");
 }

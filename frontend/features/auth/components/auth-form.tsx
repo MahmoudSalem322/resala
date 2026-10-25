@@ -11,7 +11,7 @@ import styles from "../auth.module.css";
 
 export default function AuthForm({ mode }: { mode: AuthMode }) {
   const formId = useId();
-  const { session, signIn, signOut } = useAuth();
+  const { session, signIn, signOut, isRestoring } = useAuth();
   const [notice, setNotice] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
@@ -58,6 +58,8 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
       setIsLoading(false);
     }
   }
+
+  if (isRestoring) return <p role="status">جاري التحقق من الدخول…</p>;
 
   if (!isRegister && session) {
     return (

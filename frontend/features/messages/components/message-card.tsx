@@ -8,7 +8,7 @@ export default function MessageCard() {
         <span className="card-mark" aria-hidden="true">↗</span>
       </div>
       <h2 id="form-title">شو حابب تحكي؟</h2>
-      <p className="card-description">بلّش باسمك، وبعدين اترك رسالتك.</p>
+      <p className="card-description">اترك رسالتك باسم حسابك المسجّل.</p>
       <MessageForm />
     </section>
   );
