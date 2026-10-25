@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import type { AuthUser, LoginResult } from "../types";
 import { getCurrentUser, logoutUser } from "../services/auth-api";
 
@@ -17,6 +17,7 @@ type AuthContextValue = {
   isRestoring: boolean;
   restoreError: string;
   retryRestore: () => void;
+  clearSession: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -28,6 +29,13 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const [restoreError, setRestoreError] = useState("");
   const [restoreAttempt, setRestoreAttempt] = useState(0);
   const revision = useRef(0);
+  const clearSession = useCallback(() => {
+    revision.current++;
+    setSession(null);
+    setIsRestoring(false);
+    setRestoreError("");
+    setLogoutError("");
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -78,7 +86,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  return <AuthContext.Provider value={{ session, signIn, signOut, logoutError, isRestoring, restoreError, retryRestore }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ session, signIn, signOut, logoutError, isRestoring, restoreError, retryRestore, clearSession }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

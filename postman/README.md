@@ -14,3 +14,5 @@ Cookie باسم access_token، مدتها 900 ثانية، HttpOnly وSameSite=S
 GET /api/auth/me يسترجع المستخدم من Cookie ويرجع بياناته والمدة المتبقية دون تجديدها. نفّذه بعد Login، وبعد Logout تتوقع 401. الواجهة تستدعيه عند فتح الصفحة لاسترجاع الدخول بعد الرفرش. لا يوجد Refresh Token بعد.
 
 الفحص العملي: node scripts/test-message-auth.js. ينشئ حسابًا ورسائل مؤقتة ويحذفها بعد الفحص.
+
+طلب My messages: GET /api/messages يرجع رسائل الحساب المسجّل فقط بترتيب created_at DESC ثم id DESC. لا ترسل user_id؛ السيرفر يأخذه من الجلسة. إذا لم توجد رسائل يرجع 200 مع data: []، وبدون دخول يرجع 401. نفّذه بعد Login وقبل Logout. الفحص العملي: node scripts/test-message-list.js.

@@ -1,16 +1,12 @@
 import SiteHeader from "@/components/layout/site-header";
 import SiteFooter from "@/components/layout/site-footer";
-import MessageIntro from "@/features/messages/components/message-intro";
-import MessageCard from "@/features/messages/components/message-card";
+import MessageExperience from "@/features/messages/components/message-experience";
 
 export default function Home() {
   return (
-    <div className="site-shell">
+    <div className="site-shell home-shell">
       <SiteHeader />
-      <main className="workspace">
-        <MessageIntro />
-        <MessageCard />
-      </main>
+      <MessageExperience />
       <SiteFooter />
     </div>
   );

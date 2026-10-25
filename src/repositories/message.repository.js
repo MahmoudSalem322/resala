@@ -11,4 +11,15 @@ async function createMessage({ name, userId, message }) {
   return result.rows[0];
 }
 
-module.exports = { createMessage };
+async function listMessages(userId) {
+  const result = await pool.query(
+    `SELECT id, message, created_at
+     FROM public.messages
+     WHERE user_id = $1
+     ORDER BY created_at DESC, id DESC`,
+    [userId],
+  );
+  return result.rows;
+}
+
+module.exports = { createMessage, listMessages };

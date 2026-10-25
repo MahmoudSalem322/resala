@@ -10,7 +10,8 @@ export default function AuthNavigation() {
     <nav className="site-nav" aria-label="التنقل الرئيسي">
       {logoutError && <span role="alert">{logoutError}</span>}
       {restoreError && <span role="alert">{restoreError} <button type="button" onClick={retryRestore}>إعادة المحاولة</button></span>}
-      <Link href="/">الرسائل</Link>
+      <Link href="/">الرئيسية</Link>
+      <Link href="/my-messages">رسائلي</Link>
       {isRestoring ? <span role="status">جاري التحقق من الدخول…</span> : session ? (
         <>
           <span className="nav-user" title={session.user.name}>مرحبًا، {session.user.name}</span>

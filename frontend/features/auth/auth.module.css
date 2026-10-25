@@ -1,8 +1,8 @@
 .screen { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; padding: 48px 0; min-height: calc(100svh - 179px); }
-.welcome { position: relative; overflow: hidden; align-self: stretch; display: flex; flex-direction: column; justify-content: center; min-height: 580px; background: #244f3d; color: #fffef5; padding: 40px; border-radius: 24px; }
+.welcome { position: relative; overflow: hidden; align-self: stretch; display: flex; flex-direction: column; justify-content: center; min-height: 580px; background: radial-gradient(ellipse at 0 100%, #006b3d66, transparent 65%), #0a1411; color: #fffef5; padding: 40px; border-radius: 0; }
 .eyebrow { color: #c4d3b0; font-size: 12px; }
 .welcome h1 { font-size: clamp(32px, 3.4vw, 46px); line-height: 1.65; letter-spacing: -1px; margin: 22px 0 14px; }
-.welcome h1 > span { color: #d3e2b2; text-decoration: none; }
+.welcome h1 > span { color: #00e58a; text-decoration: none; }
 .welcome > p { color: #c3d0c3; font-size: 14px; line-height: 1.95; margin: 0; }
 .art { position: relative; height: 240px; display: grid; place-items: center; margin-top: 12px; }
 .orbit { position: absolute; width: 220px; height: 220px; border: 1px solid #c4d3b030; border-radius: 50%; }

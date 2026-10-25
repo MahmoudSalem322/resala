@@ -261,6 +261,40 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "06 - My messages",
+          "request": {
+            "description": "يرجع رسائل الحساب المسجّل فقط، بالأحدث أولًا. رقم المستخدم يؤخذ من Cookie ولا يرسل مع الطلب. يرجع data فارغة إذا لم توجد رسائل، و401 بدون جلسة صالحة.",
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/messages"
+          },
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"My messages returned\", () => {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data).to.be.an(\"array\");",
+                  "  body.data.forEach(item => {",
+                  "    pm.expect(item).to.have.all.keys(\"id\", \"message\", \"created_at\");",
+                  "    pm.expect(item.id).to.be.a(\"number\");",
+                  "    pm.expect(item.message).to.be.a(\"string\");",
+                  "  });",
+                  "  pm.expect(pm.response.headers.get(\"Cache-Control\")).to.eql(\"no-store\");",
+                  "});"
+                ]
+              },
+              "listen": "test"
+            }
+          ],
+          "response": []
         }
       ]
     }

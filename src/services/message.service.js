@@ -10,4 +10,8 @@ async function createMessage({ name, userId, message }) {
   return messageRepository.createMessage({ name, userId, message: message.trim() });
 }
 
-module.exports = { createMessage };
+async function listMessages(userId) {
+  return messageRepository.listMessages(userId);
+}
+
+module.exports = { createMessage, listMessages };

@@ -11,4 +11,9 @@ async function createMessage(req, res) {
   });
 }
 
-module.exports = { createMessage };
+async function listMessages(req, res) {
+  const data = await messageService.listMessages(req.user.id);
+  res.json({ success: true, data });
+}
+
+module.exports = { createMessage, listMessages };

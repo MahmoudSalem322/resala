@@ -1,16 +1,18 @@
-:root { --background: #f6f5ef; --foreground: #243c31; --green: #275d48; }
+:root { --background: #f8f9f5; --foreground: #14271d; --green: #007f4e; }
+html { scroll-behavior: smooth; scroll-padding-top: 105px; }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
+body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font-almarai), Arial, sans-serif; }
 button, input, textarea { font: inherit; }
 a { color: inherit; text-decoration: none; }
-.site-shell { max-width: 1240px; margin: auto; padding: 0 56px; }
-.site-header { height: 108px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #dde0d6; }
+.site-shell { width: 100%; margin: auto; padding: 0 56px; }
+.site-header { height: 90px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ffffff18; background: #0a1411ed; color: #f4fff8; margin-inline: -56px; padding: 0 56px; position: sticky; top: 0; z-index: 20; backdrop-filter: blur(16px); gap: 24px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 29px; font-weight: 700; }
-.brand-icon { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 12px 12px 3px 12px; background: var(--green); color: white; font-size: 25px; }
+.brand-icon { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 0; background: #00e58a; color: #0a2115; font-size: 25px; }
 .project-label { font-size: 10px; letter-spacing: 2px; color: #7c8278; }
-.site-nav { display: flex; align-items: center; gap: 22px; font-size: 12px; color: #65745e; }
-.site-nav a:hover { color: var(--green); }
-.nav-register { border: 1px solid #bfcdb5; border-radius: 8px; padding: 10px 15px; color: var(--green); }
+.site-nav { display: flex; align-items: center; gap: 26px; font-size: 12px; color: #b5c8bc; }
+.site-nav a:hover { color: #00e58a; }
+.nav-register { border: 1px solid #758d7c; border-radius: 0; padding: 12px 20px; color: #f1fff5; }
+.nav-register:hover { background: #00e58a; border-color: #00e58a; color: #062415 !important; }
 .nav-user { max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nav-logout { background: transparent; cursor: pointer; }
 .workspace { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 85px; padding: 64px 0 66px; min-height: calc(100svh - 179px); }
@@ -54,16 +56,17 @@ input:disabled, textarea:disabled { opacity: .7; cursor: wait; }
 .form-result:not(:empty) { margin-top: 15px; padding: 10px; background: #eef3e7; border-radius: 6px; }
 .form-result { display: flex; align-items: baseline; gap: 8px; }
 .form-result--error:not(:empty) { background: #fff0ed; color: #a43b2f; }
-.site-footer { display: flex; justify-content: space-between; align-items: center; min-height: 71px; border-top: 1px solid #dde0d6; color: #93998c; font-size: 11px; gap: 20px; }
+.site-footer { display: flex; justify-content: space-between; align-items: center; min-height: 110px; border-top: 1px solid #ffffff15; color: #95b3a0; background: #0a1411; margin-inline: -56px; padding: 30px 56px; font-size: 11px; gap: 20px; }
 .site-footer > span:last-child { font-size: 9px; letter-spacing: 2px; }
 @media (max-width: 850px) {
   .site-shell { padding: 0 25px; }
+  .site-header, .site-footer { margin-inline: -25px; padding-inline: 25px; }
   .workspace { gap: 35px; }
   .message-card { padding: 25px; }
 }
 @media (max-width: 650px) {
-  .site-header { height: 83px; }
-  .site-nav { gap: 13px; font-size: 11px; }
+  .site-header { min-height: 83px; height: auto; padding-block: 16px; gap: 15px; flex-wrap: wrap; }
+  .site-nav { gap: 13px; font-size: 11px; flex-wrap: wrap; }
   .nav-user { max-width: 100px; }
   .nav-register { padding: 8px 10px; }
   .project-label { font-size: 8px; letter-spacing: 1px; }
@@ -75,3 +78,4 @@ input:disabled, textarea:disabled { opacity: .7; cursor: wait; }
   .site-footer { font-size: 10px; }
   .site-footer > span:last-child { font-size: 8px; letter-spacing: 1px; }
 }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
