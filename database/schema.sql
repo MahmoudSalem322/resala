@@ -15,3 +15,8 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique
   ON users (LOWER(email));
+
+-- Keep existing anonymous messages; all new API messages require an owner.
+ALTER TABLE public.messages
+  ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES public.users(id);
+CREATE INDEX IF NOT EXISTS messages_user_id_index ON public.messages(user_id);
