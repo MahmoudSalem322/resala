@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Message } from "../types";
 import styles from "../my-messages.module.css";
 import { useAuth } from "@/features/auth/components/auth-provider";
-import { getMyMessages, MessageSessionExpiredError } from "../services/messages-api";
+import { useMessagePage } from "../use-message-page";
 import DeleteMessageDialog from "./delete-message-dialog";
 import EditMessageDialog from "./edit-message-dialog";
 
@@ -29,42 +29,17 @@ export default function MyMessages() {
 }
 
 function AccountMessages() {
-  const { clearSession } = useAuth();
-  const [result, setResult] = useState<{ status: "loading" } | { status: "error"; message: string } | { status: "success"; messages: Message[] }>({ status: "loading" });
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    const controller = new AbortController();
-    getMyMessages(controller.signal).then((messages) => {
-      if (!controller.signal.aborted) setResult({ status: "success", messages });
-    }).catch((error: unknown) => {
-      if (controller.signal.aborted) return;
-      if (error instanceof MessageSessionExpiredError) { clearSession(); return; }
-      setResult({ status: "error", message: error instanceof Error && error.message.startsWith("وصل رد") ? error.message : "تعذّر تحميل رسائلك. تأكد من الاتصال وحاول مرة ثانية." });
-    });
-    return () => controller.abort();
-  }, [attempt, clearSession]);
-
-  if (result.status === "loading") return <MessagesNotice>
-    <p role="status">جاري تحميل رسائلك…</p>
-    <div className={styles.list} aria-hidden="true">{[1, 2, 3].map((id) => <div key={id} className={`${styles.card} ${styles.skeletonCard}`}><div className={styles.skeleton} /><div className={styles.skeleton} /><div className={styles.skeleton} /></div>)}</div>
-  </MessagesNotice>;
-  if (result.status === "error") return <MessagesNotice><h2>ما قدرنا نحمّل رسائلك</h2><p role="alert">{result.message}</p><button className={styles.emptyAction} type="button" onClick={() => { setResult({ status: "loading" }); setAttempt((value) => value + 1); }}>حاول مرة ثانية</button></MessagesNotice>;
-  return <MessagesView messages={result.messages} onDelete={(id) => setResult((current) =>
-    current.status === "success" ? { ...current, messages: current.messages.filter((message) => message.id !== id) } : current)}
-    onUpdate={(updated) => setResult((current) => current.status === "success" ? {
-      ...current, messages: current.messages.map((message) => message.id === updated.id ? updated : message),
-    } : current)} />;
+  return <MessagesView />;
 }
 
-function MessagesView({ messages, onDelete, onUpdate }: { messages: Message[]; onDelete: (id: number) => void; onUpdate: (message: Message) => void }) {
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState("newest");
+function MessagesView() {
+  const { query, data, loading, error, changeQuery, reload } = useMessagePage();
+  const messages = data?.messages ?? [];
+  const pagination = data?.pagination;
   const [selected, setSelected] = useState<Message | null>(null);
   const [editing, setEditing] = useState<Message | null>(null);
   const [notice, setNotice] = useState("");
   const heading = useRef<HTMLHeadingElement>(null);
-  const filtered = messages.filter((item) => item.message.includes(search.trim())).sort((a, b) =>
-    sort === "newest" ? Date.parse(b.created_at) - Date.parse(a.created_at) || b.id - a.id : Date.parse(a.created_at) - Date.parse(b.created_at) || a.id - b.id);
 
   return (
     <main className={styles.page}>
@@ -78,27 +53,29 @@ function MessagesView({ messages, onDelete, onUpdate }: { messages: Message[]; o
       </div>
       <section className={styles.collection} aria-labelledby="my-messages-title">
         <div className={styles.collectionHeading}>
-          <div className={styles.titleRow}><h2 ref={heading} tabIndex={-1} id="my-messages-title">رسائلي</h2><span className={styles.count}>{messages.length}</span></div>
+          <div className={styles.titleRow}><h2 ref={heading} tabIndex={-1} id="my-messages-title">رسائلي</h2><span className={styles.count}>{pagination?.total ?? "—"}</span></div>
           <span className={styles.sectionNumber} dir="ltr">02 / MY WORDS</span>
         </div>
         <div className={styles.toolbar}>
           <div className={styles.search}>
             <label className={styles.srOnly} htmlFor="message-search">ابحث في الرسائل</label>
             <span aria-hidden="true">⌕</span>
-            <input id="message-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="دور على كلمة برسائلك…" />
+            <input id="message-search" type="search" value={query.q} maxLength={200} onChange={(event) => { setNotice(""); changeQuery({ q: event.target.value }); }} placeholder="دور على كلمة بكل رسائلك…" />
           </div>
           <div className={styles.sort}>
             <label htmlFor="message-sort">الترتيب</label>
-            <select id="message-sort" value={sort} onChange={(event) => setSort(event.target.value)}>
+            <select id="message-sort" value={query.sort} onChange={(event) => { setNotice(""); changeQuery({ sort: event.target.value === "oldest" ? "oldest" : "newest" }); }}>
               <option value="newest">الأحدث أولًا</option><option value="oldest">الأقدم أولًا</option>
             </select>
           </div>
         </div>
-        <p className={styles.results} role="status">{search.trim() ? `نتائج البحث: ${filtered.length}` : `عدد الرسائل: ${messages.length}`}</p>
+        <p className={styles.results} role="status">{loading ? "جاري تحميل رسائلك…" : pagination ? `${query.q.trim() ? "نتائج البحث" : "عدد الرسائل"}: ${pagination.total}` : "تعذّر تحميل الرسائل"}</p>
         {notice && <p role="status" className={styles.deleteNotice}>{notice}</p>}
-        {filtered.length ? (
+        {loading ? <div className={styles.list} aria-busy="true" aria-label="تحميل الرسائل">{[1, 2, 3].map((id) => <div key={id} className={`${styles.card} ${styles.skeletonCard}`} aria-hidden="true"><div className={styles.skeleton} /><div className={styles.skeleton} /><div className={styles.skeleton} /></div>)}</div>
+        : error ? <div className={styles.empty}><h3>ما قدرنا نحمّل رسائلك</h3><p role="alert">{error}</p><button className={styles.emptyAction} type="button" onClick={reload}>حاول مرة ثانية</button></div>
+        : messages.length ? (
           <ul className={styles.list}>
-            {filtered.map((item) => (
+            {messages.map((item) => (
               <li key={item.id}><article className={styles.card}>
                 <div className={styles.cardTop}><span className={styles.noteIcon} aria-hidden="true">↗</span><span>رسالة <bdi>#{String(item.id).padStart(2, "0")}</bdi></span></div>
                 <p className={styles.message} dir="auto">{item.message}</p>
@@ -113,21 +90,25 @@ function MessagesView({ messages, onDelete, onUpdate }: { messages: Message[]; o
         ) : (
           <div className={styles.empty}>
             <span className={styles.emptyIcon} aria-hidden="true">✉</span>
-            <h3>{messages.length ? "ما لقينا رسالة بهاي الكلمة" : "أول حكاية بتبلّش بكلمة"}</h3>
-            <p>{messages.length ? "جرّب كلمة ثانية، أو ارجع لكل رسائلك." : "لسه ما عندك رسائل. اكتب أول رسالة وخلي إلها مكان هون."}</p>
-            {messages.length ? <button className={styles.emptyAction} type="button" onClick={() => setSearch("")}>عرض كل الرسائل</button> : <Link className={styles.emptyAction} href="/">اكتب أول رسالة ↖</Link>}
+            <h3>{query.q.trim() ? "ما لقينا رسالة بهاي الكلمة" : "أول حكاية بتبلّش بكلمة"}</h3>
+            <p>{query.q.trim() ? "جرّب كلمة ثانية، أو ارجع لكل رسائلك." : "لسه ما عندك رسائل. اكتب أول رسالة وخلي إلها مكان هون."}</p>
+            {query.q.trim() ? <button className={styles.emptyAction} type="button" onClick={() => changeQuery({ q: "" })}>عرض كل الرسائل</button> : <Link className={styles.emptyAction} href="/">اكتب أول رسالة ↖</Link>}
           </div>
         )}
+        {(loading || pagination && pagination.total > 0) && <nav className={styles.pagination} aria-label="صفحات الرسائل">
+          <span>{pagination ? `عرض ${(pagination.page - 1) * pagination.limit + 1}–${Math.min(pagination.page * pagination.limit, pagination.total)} من ${pagination.total}` : "جاري تحديث الصفحة…"}</span>
+          <div><button type="button" disabled={loading || !pagination || pagination.page <= 1} onClick={() => { if (pagination) changeQuery({ page: pagination.page - 1 }); }}>السابق</button><span aria-current="page">{pagination ? `صفحة ${pagination.page} من ${pagination.totalPages}` : "…"}</span><button type="button" disabled={loading || !pagination || pagination.page >= pagination.totalPages} onClick={() => { if (pagination) changeQuery({ page: pagination.page + 1 }); }}>التالي</button></div>
+        </nav>}
       </section>
       <p className={styles.endnote}>كلمات بسيطة، بتترك أثر. <span aria-hidden="true">✳</span></p>
-      {selected && <DeleteMessageDialog message={selected} onDismiss={() => setSelected(null)} onDeleted={(id, outcome) => {
-        onDelete(id);
+      {selected && <DeleteMessageDialog message={selected} onDismiss={() => setSelected(null)} onDeleted={(_id, outcome) => {
+        reload();
         setSelected(null);
         setNotice(outcome === "deleted" ? "تم حذف الرسالة." : "الرسالة مش موجودة بالفعل، حدّثنا القائمة.");
         requestAnimationFrame(() => heading.current?.focus());
       }} />}
-      {editing && <EditMessageDialog message={editing} onDismiss={() => setEditing(null)} onSaved={(updated) => {
-        onUpdate(updated);
+      {editing && <EditMessageDialog message={editing} onDismiss={() => setEditing(null)} onSaved={() => {
+        reload();
         setEditing(null);
         setNotice("تم حفظ تعديل الرسالة.");
         requestAnimationFrame(() => heading.current?.focus());

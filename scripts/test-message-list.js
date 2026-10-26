@@ -32,13 +32,13 @@ async function main() {
     assert.equal((await get(expired)).status, 401);
     const empty = await get(ownerToken);
     assert.equal(empty.status, 200);
-    assert.deepEqual(await empty.json(), { success: true, data: [] });
+    assert.deepEqual(await empty.json(), { success: true, data: [], pagination: { page: 1, limit: 12, total: 0, totalPages: 1 } });
     const ids = [];
     for (const [ownerId, message, date] of [
-      [userIds[0], "Older", "2026-01-01T00:00:00Z"],
+      [userIds[0], "Older needle", "2026-01-01T00:00:00Z"],
       [userIds[0], "Newer", "2026-01-02T00:00:00Z"],
-      [userIds[0], "Same date, higher ID", "2026-01-02T00:00:00Z"],
-      [userIds[1], "Other user's private message", "2026-01-03T00:00:00Z"],
+      [userIds[0], "Same date, higher ID 100%_\\end", "2026-01-02T00:00:00Z"],
+      [userIds[1], "Other user's private needle", "2026-01-03T00:00:00Z"],
     ]) {
       const result = await pool.query(
         "INSERT INTO public.messages (name, message, user_id, created_at) VALUES ($1, $2, $3, $4) RETURNING id",
@@ -59,7 +59,47 @@ async function main() {
     }
     const other = await get(otherToken);
     assert.deepEqual((await other.json()).data.map((item) => item.id), [ids[3]]);
-    console.log("Message list checks passed: auth, expired token, empty list, account isolation, ignored user_id, ordering, response shape, no-store.");
+    const additional = [];
+    for (let index = 1; index <= 22; index++) {
+      const row = await pool.query("INSERT INTO public.messages (name, message, user_id, created_at) VALUES ($1, $2, $3, $4) RETURNING id",
+        ["List test", `Extra ${index}`, userIds[0], `2026-02-${String(index).padStart(2, "0")}T00:00:00Z`]);
+      additional.push(row.rows[0].id);
+    }
+    const expected = [...additional].reverse().concat([ids[2], ids[1], ids[0]]);
+    const seen = [];
+    for (let page = 1; page <= 3; page++) {
+      const response = await get(ownerToken, `?page=${page}&limit=12&sort=newest`);
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.deepEqual(body.pagination, { page, limit: 12, total: 25, totalPages: 3 });
+      assert.equal(body.data.length, page === 3 ? 1 : 12);
+      seen.push(...body.data.map((item) => item.id));
+    }
+    assert.deepEqual(seen, expected);
+    assert.equal(new Set(seen).size, 25);
+    const oldest = await (await get(ownerToken, "?sort=oldest&limit=2")).json();
+    assert.deepEqual(oldest.data.map((item) => item.id), [ids[0], ids[1]]);
+    // Search must find an item outside the first page and never include another account's hit.
+    const search = await (await get(ownerToken, "?q=NEEDLE")).json();
+    assert.deepEqual(search.data.map((item) => item.id), [ids[0]]);
+    assert.equal(search.pagination.total, 1);
+    for (const q of ["%", "_", "\\"]) {
+      const match = await (await get(ownerToken, `?q=${encodeURIComponent(q)}`)).json();
+      assert.deepEqual(match.data.map((item) => item.id), [ids[2]]);
+    }
+    const none = await (await get(ownerToken, "?q=does-not-exist&page=10")).json();
+    assert.deepEqual(none.data, []);
+    assert.deepEqual(none.pagination, { page: 1, limit: 12, total: 0, totalPages: 1 });
+    for (const query of ["page=0", "page=-1", "page=1.5", "page=1000001", "limit=0", "limit=51", "sort=invalid", "page=1&page=2", "q=a&q=b", `q=${"x".repeat(201)}`]) {
+      assert.equal((await get(ownerToken, `?${query}`)).status, 400, query);
+    }
+    const beyond = await (await get(ownerToken, "?page=999")).json();
+    assert.equal(beyond.pagination.page, 3);
+    await pool.query("DELETE FROM public.messages WHERE id = $1", [ids[0]]);
+    const afterDelete = await (await get(ownerToken, "?page=3")).json();
+    assert.deepEqual(afterDelete.pagination, { page: 2, limit: 12, total: 24, totalPages: 2 });
+    assert.equal(afterDelete.data.length, 12);
+    console.log("List checks passed: authentication, isolated search, literal wildcards, validation, both sort orders, stable pagination, empty results and last-page deletion.");
   } finally {
     try {
       if (userIds.length) {

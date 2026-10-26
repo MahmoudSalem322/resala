@@ -1,4 +1,4 @@
-import type { Message } from "../types";
+import type { Message, MessageQuery, MessagePage } from "../types";
 import { rateLimitMessage } from "@/features/shared/rate-limit";
 
 export class MessageSessionExpiredError extends Error {}
@@ -40,8 +40,9 @@ export async function updateMyMessage(id: number, message: string, signal: Abort
   return result.data;
 }
 
-export async function getMyMessages(signal: AbortSignal): Promise<Message[]> {
-  const response = await fetch("http://localhost:3000/api/messages", {
+export async function getMyMessages(query: MessageQuery, signal: AbortSignal): Promise<MessagePage> {
+  const parameters = new URLSearchParams({ page: String(query.page), limit: String(query.limit), sort: query.sort, q: query.q });
+  const response = await fetch(`http://localhost:3000/api/messages?${parameters}`, {
     credentials: "include", cache: "no-store", signal,
   });
   if (response.status === 401) throw new MessageSessionExpiredError();
@@ -51,5 +52,16 @@ export async function getMyMessages(signal: AbortSignal): Promise<Message[]> {
       !("data" in result) || !Array.isArray(result.data) || !result.data.every(isMessage)) {
     throw new Error("وصل رد غير متوقع. حاول تحميل رسائلك مرة ثانية.");
   }
-  return result.data;
+  const pagination = "pagination" in result ? result.pagination : null;
+  if (!pagination || typeof pagination !== "object" || !("page" in pagination) || !("limit" in pagination) ||
+      !("total" in pagination) || !("totalPages" in pagination)) throw new Error("وصل رد غير متوقع من السيرفر.");
+  const { page, limit, total, totalPages } = pagination;
+  if (typeof page !== "number" || !Number.isSafeInteger(page) || page < 1 ||
+      typeof limit !== "number" || limit !== query.limit ||
+      typeof total !== "number" || !Number.isSafeInteger(total) || total < 0 ||
+      typeof totalPages !== "number" || totalPages !== Math.max(1, Math.ceil(total / limit)) ||
+      page !== Math.min(query.page, totalPages) || result.data.length !== Math.min(limit, Math.max(0, total - (page - 1) * limit))) {
+    throw new Error("وصل رد غير متوقع من السيرفر.");
+  }
+  return { messages: result.data, pagination: { page, limit, total, totalPages } };
 }

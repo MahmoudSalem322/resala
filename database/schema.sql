@@ -20,3 +20,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique
 ALTER TABLE public.messages
   ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES public.users(id);
 CREATE INDEX IF NOT EXISTS messages_user_id_index ON public.messages(user_id);
+CREATE INDEX IF NOT EXISTS messages_user_created_index ON public.messages(user_id, created_at DESC, id DESC);

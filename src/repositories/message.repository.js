@@ -11,15 +11,33 @@ async function createMessage({ name, userId, message }) {
   return result.rows[0];
 }
 
-async function listMessages(userId) {
+async function listMessages({ userId, page, limit, sort, search }) {
+  // Direction is selected from fixed SQL literals, never inserted from the request.
+  const direction = sort === "oldest" ? "ASC" : "DESC";
+  const pattern = search ? `%${search.replace(/[\\%_]/g, "\\$&")}%` : "";
+  // Count, page clamping, and rows share one statement/snapshot, even during writes.
   const result = await pool.query(
-    `SELECT id, message, created_at
-     FROM public.messages
-     WHERE user_id = $1
-     ORDER BY created_at DESC, id DESC`,
-    [userId],
+    `WITH filtered AS (
+       SELECT id, message, created_at FROM public.messages
+       WHERE user_id = $1 AND ($2 = '' OR message ILIKE $2)
+     ), totals AS (
+       SELECT COUNT(*)::int AS total FROM filtered
+     ), paging AS (
+       SELECT total, GREATEST(1, CEIL(total::numeric / $3)::int) AS total_pages,
+         LEAST($4::int, GREATEST(1, CEIL(total::numeric / $3)::int)) AS page
+       FROM totals
+     )
+     SELECT total, total_pages, page, COALESCE((
+       SELECT json_agg(records ORDER BY records.created_at ${direction}, records.id ${direction}) FROM (
+         SELECT id, message, created_at FROM filtered
+         ORDER BY created_at ${direction}, id ${direction}
+         LIMIT $3 OFFSET ((paging.page - 1)::bigint * $3)
+       ) records
+     ), '[]'::json) AS messages FROM paging`,
+    [userId, pattern, limit, page],
   );
-  return result.rows;
+  const row = result.rows[0];
+  return { data: row.messages, pagination: { page: row.page, limit, total: row.total, totalPages: row.total_pages } };
 }
 
 async function deleteMessage({ id, userId }) {

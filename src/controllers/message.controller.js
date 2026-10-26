@@ -12,8 +12,8 @@ async function createMessage(req, res) {
 }
 
 async function listMessages(req, res) {
-  const data = await messageService.listMessages(req.user.id);
-  res.json({ success: true, data });
+  const { data, pagination } = await messageService.listMessages(req.user.id, req.query);
+  res.json({ success: true, data, pagination });
 }
 
 async function deleteMessage(req, res) {

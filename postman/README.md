@@ -1,5 +1,7 @@
 # Fullstack Practice — Postman
 
+عرض الصفحات: طلب My messages يستخدم متغيرات messagesPage وmessagesLimit وmessagesSort وmessagesSearch. الافتراضي1 و12 وnewest وبحث فارغ. جرّب oldest أوكلمة بحث؛ البحث يطبّق على جميع رسائل الحساب قبل اختيار الصفحة. الرد يضيف pagination ولا يغير data كمصفوفة. تفاصيل الحدود وسلوك الصفحة غير الموجودة في docs/message-pagination.md.
+
 تعديل الرسالة: نفّذ Create message ثم Update my message قبل حذفها، باستخدام messageId المحفوظ وupdatedMessage للنص الجديد. PATCH /api/messages/:id يرجع200 مع الرسالة بعد التعديل. يرجع404 لرسالة غير موجودة أو لحساب آخر، و400 للرقم غير الصالح أو النص الفارغ أو الأطول من5000 حرف. الحد30 محاولة تعديل بالدقيقة لكل حساب مستقل عن الإرسال والحذف. فحص ببيانات مؤقتة: node scripts/test-message-update.js.
 
 حذف الرسالة: نفّذ Create message ثم DELETE /api/messages/{{messageId}} بحساب صاحبها. الطلب يمسح الرسالة نهائيًا ويرجع 204 بدون جسم؛ التكرار أو استخدام رقم رسالة حساب آخر يرجع 404. الحد 30 طلب حذف بالدقيقة لكل حساب، مستقل عن الإرسال. فحص الحذف ببيانات مؤقتة: node scripts/test-message-delete.js.
