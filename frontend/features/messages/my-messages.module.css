@@ -56,6 +56,18 @@
 .confirmDelete:hover { background: #792e25; }
 .dialogActions button:disabled { opacity: .6; cursor: wait; }
 .deleteDialog .deleteError { color: #983d31; background: #fff0ed; padding: 12px; }
+.cardActions { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.editButton { display: inline-flex; align-items: center; gap: 14px; background: transparent; color: #007f4e; border: 0; padding: 13px 0 0; cursor: pointer; font-size: 11px; }
+.editButton:hover { color: #005b37; text-decoration: underline; text-underline-offset: 4px; }
+.editButton span { font-size: 17px; }
+.editDialog { width: min(580px, calc(100% - 36px)); }
+.editDialog form { margin-top: 24px; }
+.editDialog textarea { border-radius: 0; background: white; max-height: 40svh; min-height: 130px; }
+.editKicker { font-size: 11px; color: #007f4e; display: block; margin-bottom: 19px; }
+.editCount { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 12px; font-size: 10px; color: #647265; line-height: 1.8; }
+.saveEdit { color: white; background: #007f4e; border-color: #007f4e !important; }
+.saveEdit:hover { background: #005b37; }
+.editStatus { color: #647265; font-size: 11px; }
 @media (max-width: 950px) { .list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .heading { align-items: flex-start; flex-direction: column; gap: 22px; } }
 @media (max-width: 650px) {
   .page { padding-top: 32px; }

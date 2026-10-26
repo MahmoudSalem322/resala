@@ -7,6 +7,7 @@ import styles from "../my-messages.module.css";
 import { useAuth } from "@/features/auth/components/auth-provider";
 import { getMyMessages, MessageSessionExpiredError } from "../services/messages-api";
 import DeleteMessageDialog from "./delete-message-dialog";
+import EditMessageDialog from "./edit-message-dialog";
 
 const dateFormat = new Intl.DateTimeFormat("ar", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Hebron" });
 const timeFormat = new Intl.DateTimeFormat("ar", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Hebron" });
@@ -49,13 +50,17 @@ function AccountMessages() {
   </MessagesNotice>;
   if (result.status === "error") return <MessagesNotice><h2>ما قدرنا نحمّل رسائلك</h2><p role="alert">{result.message}</p><button className={styles.emptyAction} type="button" onClick={() => { setResult({ status: "loading" }); setAttempt((value) => value + 1); }}>حاول مرة ثانية</button></MessagesNotice>;
   return <MessagesView messages={result.messages} onDelete={(id) => setResult((current) =>
-    current.status === "success" ? { ...current, messages: current.messages.filter((message) => message.id !== id) } : current)} />;
+    current.status === "success" ? { ...current, messages: current.messages.filter((message) => message.id !== id) } : current)}
+    onUpdate={(updated) => setResult((current) => current.status === "success" ? {
+      ...current, messages: current.messages.map((message) => message.id === updated.id ? updated : message),
+    } : current)} />;
 }
 
-function MessagesView({ messages, onDelete }: { messages: Message[]; onDelete: (id: number) => void }) {
+function MessagesView({ messages, onDelete, onUpdate }: { messages: Message[]; onDelete: (id: number) => void; onUpdate: (message: Message) => void }) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
   const [selected, setSelected] = useState<Message | null>(null);
+  const [editing, setEditing] = useState<Message | null>(null);
   const [notice, setNotice] = useState("");
   const heading = useRef<HTMLHeadingElement>(null);
   const filtered = messages.filter((item) => item.message.includes(search.trim())).sort((a, b) =>
@@ -98,7 +103,10 @@ function MessagesView({ messages, onDelete }: { messages: Message[]; onDelete: (
                 <div className={styles.cardTop}><span className={styles.noteIcon} aria-hidden="true">↗</span><span>رسالة <bdi>#{String(item.id).padStart(2, "0")}</bdi></span></div>
                 <p className={styles.message} dir="auto">{item.message}</p>
                 <div className={styles.cardFooter}><time dateTime={item.created_at}>{dateFormat.format(new Date(item.created_at))}</time><span>{timeFormat.format(new Date(item.created_at))}</span></div>
-                <button className={styles.deleteButton} type="button" aria-label={`حذف الرسالة رقم ${item.id}`} onClick={() => { setNotice(""); setSelected(item); }}>حذف الرسالة <span aria-hidden="true">×</span></button>
+                <div className={styles.cardActions}>
+                  <button className={styles.editButton} type="button" aria-label={`تعديل الرسالة رقم ${item.id}`} onClick={() => { setNotice(""); setEditing(item); }}>تعديل <span aria-hidden="true">↗</span></button>
+                  <button className={styles.deleteButton} type="button" aria-label={`حذف الرسالة رقم ${item.id}`} onClick={() => { setNotice(""); setSelected(item); }}>حذف الرسالة <span aria-hidden="true">×</span></button>
+                </div>
               </article></li>
             ))}
           </ul>
@@ -116,6 +124,12 @@ function MessagesView({ messages, onDelete }: { messages: Message[]; onDelete: (
         onDelete(id);
         setSelected(null);
         setNotice(outcome === "deleted" ? "تم حذف الرسالة." : "الرسالة مش موجودة بالفعل، حدّثنا القائمة.");
+        requestAnimationFrame(() => heading.current?.focus());
+      }} />}
+      {editing && <EditMessageDialog message={editing} onDismiss={() => setEditing(null)} onSaved={(updated) => {
+        onUpdate(updated);
+        setEditing(null);
+        setNotice("تم حفظ تعديل الرسالة.");
         requestAnimationFrame(() => heading.current?.focus());
       }} />}
     </main>
