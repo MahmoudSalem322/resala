@@ -20,6 +20,7 @@ async function main() {
   };
   app.post("/messages", authenticate, limits.message, (req, res) => res.sendStatus(201));
   app.delete("/messages/:id", authenticate, limits.deleteMessage, (req, res) => res.sendStatus(204));
+  app.patch("/messages/:id", authenticate, limits.updateMessage, (req, res) => res.sendStatus(200));
   app.get("/messages", (req, res) => res.json([]));
   app.post("/short-window", authenticate, shortLimits.message, (req, res) => res.sendStatus(201));
   const server = app.listen(0, "127.0.0.1");
@@ -70,6 +71,10 @@ async function main() {
     for (let index = 0; index < 30; index++) assert.equal((await remove("1")).status, 204);
     await checkBlocked(await remove("1"), 60);
     assert.equal((await remove("2")).status, 204);
+    const update = (user) => fetch(base + "/messages/1", { method: "PATCH", headers: { "X-Test-User": user } });
+    for (let index = 0; index < 30; index++) assert.equal((await update("1")).status, 200);
+    await checkBlocked(await update("1"), 60);
+    assert.equal((await update("2")).status, 200);
     for (let index = 0; index < 10; index++) assert.equal((await post("/short-window", {}, "1")).status, 201);
     await checkBlocked(await post("/short-window", {}, "1"), 1);
     await delay(1100);

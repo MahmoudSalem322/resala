@@ -38,6 +38,11 @@
                          "key":  "messageId",
                          "value":  "",
                          "type":  "string"
+                     },
+                     {
+                         "key":  "updatedMessage",
+                         "value":  "هذه رسالتي بعد التعديل.",
+                         "type":  "string"
                      }
                  ],
     "item":  [
@@ -315,7 +320,53 @@
                                                    ]
                                   },
                                   {
-                                      "name":  "07 - Delete my message",
+                                      "name":  "07 - Update my message",
+                                      "request":  {
+                                                      "body":  {
+                                                                   "raw":  "{\"message\":\"{{updatedMessage}}\"}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               },
+                                                                   "mode":  "raw"
+                                                               },
+                                                      "description":  "يعدل نص الرسالة لصاحب الحساب فقط. نفّذ Create message أولًا. النجاح 200 مع الرسالة المعدلة؛ النص من1 إلى5000 حرف. لا يعدل صاحب الرسالة أو تاريخ إرسالها. الحد30 طلب تعديل بالدقيقة لكل حساب.",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "method":  "PATCH",
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/messages/{{messageId}}"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Message updated\", () =\u003e {",
+                                                                                    "  pm.expect(pm.response.code).to.eql(200);",
+                                                                                    "  const body = pm.response.json();",
+                                                                                    "  pm.expect(body.success).to.eql(true);",
+                                                                                    "  pm.expect(body.data.id).to.eql(Number(pm.collectionVariables.get(\"messageId\")));",
+                                                                                    "  pm.expect(body.data.message).to.eql(pm.collectionVariables.get(\"updatedMessage\").trim());",
+                                                                                    "});"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   },
+                                                        "listen":  "test"
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "08 - Delete my message",
                                       "request":  {
                                                       "method":  "DELETE",
                                                       "url":  "{{baseUrl}}/api/messages/{{messageId}}",
