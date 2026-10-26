@@ -30,4 +30,14 @@ async function deleteMessage({ id, userId }) {
   return result.rowCount > 0;
 }
 
-module.exports = { createMessage, listMessages, deleteMessage };
+async function updateMessage({ id, userId, message }) {
+  const result = await pool.query(
+    `UPDATE public.messages SET message = $1
+     WHERE id = $2 AND user_id = $3
+     RETURNING id, message, created_at`,
+    [message, id, userId],
+  );
+  return result.rows[0] || null;
+}
+
+module.exports = { createMessage, listMessages, deleteMessage, updateMessage };

@@ -16,4 +16,9 @@ router.delete("/:id", (req, res, next) => {
   next();
 }, requireAuth, limits.deleteMessage, messageController.deleteMessage);
 
+router.patch("/:id", (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+}, requireAuth, limits.updateMessage, messageController.updateMessage);
+
 module.exports = router;

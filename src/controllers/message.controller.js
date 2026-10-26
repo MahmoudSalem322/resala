@@ -21,4 +21,9 @@ async function deleteMessage(req, res) {
   res.status(204).end();
 }
 
-module.exports = { createMessage, listMessages, deleteMessage };
+async function updateMessage(req, res) {
+  const data = await messageService.updateMessage({ id: req.params.id, userId: req.user.id, message: req.body?.message });
+  res.json({ success: true, message: "تم تعديل الرسالة.", data });
+}
+
+module.exports = { createMessage, listMessages, deleteMessage, updateMessage };

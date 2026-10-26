@@ -39,6 +39,9 @@ function createRateLimiters({ loginWindowMs = 15 * MINUTE, registerWindowMs = 60
     deleteMessage: rateLimit({ ...common, identifier: "delete-message-account", windowMs: messageWindowMs, limit: 30,
       keyGenerator: (req) => String(req.user.id),
     }),
+    updateMessage: rateLimit({ ...common, identifier: "update-message-account", windowMs: messageWindowMs, limit: 30,
+      keyGenerator: (req) => String(req.user.id),
+    }),
   };
 }
 
