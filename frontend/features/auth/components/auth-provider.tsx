@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import type { AuthUser, LoginResult } from "../types";
 import { getCurrentUser, logoutUser } from "../services/auth-api";
+import { SESSION_EVENT, refreshSession } from "@/features/shared/session-client";
 
 type AuthSession = {
   user: AuthUser;
@@ -38,6 +39,19 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    function sessionChanged(event: Event) {
+      const result = (event as CustomEvent<LoginResult | null>).detail;
+      if (!result) { clearSession(); return; }
+      revision.current++;
+      setSession({ user: result.user, expiresAt: Date.now() + result.expiresIn * 1000 });
+      setIsRestoring(false);
+      setRestoreError("");
+    }
+    window.addEventListener(SESSION_EVENT, sessionChanged);
+    return () => window.removeEventListener(SESSION_EVENT, sessionChanged);
+  }, [clearSession]);
+
+  useEffect(() => {
     const controller = new AbortController();
     const currentRevision = ++revision.current;
     getCurrentUser(controller.signal).then((result) => {
@@ -61,8 +75,17 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!session) return;
-    const timer = window.setTimeout(() => setSession(null), Math.max(0, session.expiresAt - Date.now()));
-    return () => window.clearTimeout(timer);
+    let active = true;
+    let timer: number;
+    function renew() {
+      refreshSession().catch(() => {
+        if (!active) return;
+        setRestoreError("تعذّر تجديد الجلسة. تحقق من الاتصال وحاول مرة ثانية.");
+        timer = window.setTimeout(renew, 30_000);
+      });
+    }
+    timer = window.setTimeout(renew, Math.max(0, session.expiresAt - Date.now() + 100));
+    return () => { active = false; window.clearTimeout(timer); };
   }, [session]);
 
   function signIn(result: LoginResult) {

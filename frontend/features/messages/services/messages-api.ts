@@ -1,10 +1,11 @@
 import type { Message, MessageQuery, MessagePage } from "../types";
 import { rateLimitMessage } from "@/features/shared/rate-limit";
+import { apiFetch } from "@/features/shared/session-client";
 
 export class MessageSessionExpiredError extends Error {}
 
 export async function deleteMyMessage(id: number, signal: AbortSignal): Promise<"deleted" | "missing"> {
-  const response = await fetch(`http://localhost:3000/api/messages/${id}`, {
+  const response = await apiFetch(`http://localhost:3000/api/messages/${id}`, {
     method: "DELETE", credentials: "include", signal,
   });
   if (response.status === 401) throw new MessageSessionExpiredError();
@@ -23,7 +24,7 @@ function isMessage(value: unknown): value is Message {
 }
 
 export async function updateMyMessage(id: number, message: string, signal: AbortSignal): Promise<Message> {
-  const response = await fetch(`http://localhost:3000/api/messages/${id}`, {
+  const response = await apiFetch(`http://localhost:3000/api/messages/${id}`, {
     method: "PATCH", credentials: "include", signal,
     headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message }),
   });
@@ -42,7 +43,7 @@ export async function updateMyMessage(id: number, message: string, signal: Abort
 
 export async function getMyMessages(query: MessageQuery, signal: AbortSignal): Promise<MessagePage> {
   const parameters = new URLSearchParams({ page: String(query.page), limit: String(query.limit), sort: query.sort, q: query.q });
-  const response = await fetch(`http://localhost:3000/api/messages?${parameters}`, {
+  const response = await apiFetch(`http://localhost:3000/api/messages?${parameters}`, {
     credentials: "include", cache: "no-store", signal,
   });
   if (response.status === 401) throw new MessageSessionExpiredError();

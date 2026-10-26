@@ -5,9 +5,10 @@ import MessageFeedback from "./message-feedback";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/components/auth-provider";
 import { rateLimitMessage } from "@/features/shared/rate-limit";
+import { apiFetch } from "@/features/shared/session-client";
 
 export default function MessageForm() {
-  const { session, signOut, isRestoring } = useAuth();
+  const { session, clearSession, isRestoring } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
@@ -28,7 +29,7 @@ export default function MessageForm() {
     setFeedback(null);
 
     try {
-      const response = await fetch("http://localhost:3000/api/messages", {
+      const response = await apiFetch("http://localhost:3000/api/messages", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -42,7 +43,7 @@ export default function MessageForm() {
         return;
       }
       if (response.status === 401) {
-        signOut();
+        clearSession();
         setFeedback({ type: "error", message: "انتهت جلسة الدخول. سجّل دخولك من جديد." });
         return;
       }
