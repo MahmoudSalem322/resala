@@ -10,6 +10,7 @@ const router = express.Router();
 router.post("/register", limits.register, validateRegister, authController.register);
 router.post("/login", limits.loginIp, validateLogin, limits.loginAccount, authController.login);
 router.post("/logout", authController.logout);
+router.post("/refresh", limits.refresh, authController.refresh);
 router.get("/me", (req, res, next) => {
   res.set("Cache-Control", "no-store");
   next();

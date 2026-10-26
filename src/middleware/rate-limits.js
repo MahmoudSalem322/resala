@@ -33,6 +33,7 @@ function createRateLimiters({ loginWindowMs = 15 * MINUTE, registerWindowMs = 60
       },
     }),
     register: rateLimit({ ...common, identifier: "register-ip", windowMs: registerWindowMs, limit: 5 }),
+    refresh: rateLimit({ ...common, identifier: "refresh-ip", windowMs: MINUTE, limit: 60 }),
     message: rateLimit({ ...common, identifier: "message-account", windowMs: messageWindowMs, limit: 10,
       keyGenerator: (req) => String(req.user.id),
     }),

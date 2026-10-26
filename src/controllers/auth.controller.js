@@ -1,5 +1,7 @@
 const authService = require("../services/auth.service");
-const { setAuthCookie, clearAuthCookie } = require("../utils/auth-cookie");
+const { setSessionCookies, clearSessionCookies, readAuthCookie, readRefreshCookie } = require("../utils/auth-cookie");
+
+function requestTokens(req) { return { accessToken: readAuthCookie(req), refreshToken: readRefreshCookie(req) }; }
 
 async function register(req, res) {
   const { name, email, password } = req.body;
@@ -19,10 +21,10 @@ async function register(req, res) {
 
 async function login(req, res) {
   const { email, password } = req.body;
-  const result = await authService.login({ email, password });
+  const result = await authService.login({ email, password }, requestTokens(req));
 
   res.set("Cache-Control", "no-store");
-  setAuthCookie(res, result.accessToken);
+  setSessionCookies(res, result);
   res.status(200).json({
     success: true,
     message: "تم تسجيل الدخول بنجاح.",
@@ -30,8 +32,9 @@ async function login(req, res) {
   });
 }
 
-function logout(req, res) {
-  clearAuthCookie(res);
+async function logout(req, res) {
+  await authService.revokeSession(requestTokens(req));
+  clearSessionCookies(res);
   res.set("Cache-Control", "no-store");
   res.json({ success: true, message: "تم تسجيل الخروج." });
 }
@@ -44,4 +47,16 @@ function me(req, res) {
   res.json({ success: true, data: { user: req.user, expiresIn } });
 }
 
-module.exports = { register, login, logout, me };
+async function refresh(req, res) {
+  res.set("Cache-Control", "no-store");
+  try {
+    const result = await authService.refreshSession(readRefreshCookie(req));
+    setSessionCookies(res, result);
+    res.json({ success: true, data: { user: result.user, expiresIn: result.expiresIn } });
+  } catch (error) {
+    if (error.status === 401) clearSessionCookies(res);
+    throw error;
+  }
+}
+
+module.exports = { register, login, logout, me, refresh };

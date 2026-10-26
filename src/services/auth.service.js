@@ -1,7 +1,9 @@
 const userRepository = require("../repositories/user.repository");
 const { hashPassword, verifyPassword, DUMMY_PASSWORD_HASH } = require("../utils/password");
-const { createAccessToken } = require("../utils/token");
+const { createAccessToken, createRefreshToken, hashRefreshToken } = require("../utils/token");
 const jwtConfig = require("../config/jwt");
+const jwt = require("jsonwebtoken");
+const sessions = require("../repositories/session.repository");
 
 function duplicateEmailError() {
   const error = new Error("Email already registered.");
@@ -30,7 +32,7 @@ async function register({ name, email, password }) {
   }
 }
 
-async function login({ email, password }) {
+async function login({ email, password }, previousTokens = {}) {
   const user = await userRepository.findForAuthentication(email);
   const matches = await verifyPassword(password, user ? user.password_hash : DUMMY_PASSWORD_HASH);
 
@@ -42,6 +44,16 @@ async function login({ email, password }) {
     throw error;
   }
 
+  await revokeSession(previousTokens);
+  const refreshToken = createRefreshToken();
+  const session = await sessions.createSession(user.id, hashRefreshToken(refreshToken));
+  return sessionResult(user, session, refreshToken);
+}
+
+function sessionResult(user, session, refreshToken) {
+  const refreshExpiresIn = Math.floor((session.expires_at.getTime() - Date.now()) / 1000);
+  if (refreshExpiresIn <= 0) throw expiredSession();
+  const expiresIn = Math.min(jwtConfig.expiresIn, refreshExpiresIn);
   return {
     user: {
       id: user.id,
@@ -49,10 +61,48 @@ async function login({ email, password }) {
       email: user.email,
       created_at: user.created_at,
     },
-    accessToken: createAccessToken(user.id),
-    tokenType: "Bearer",
-    expiresIn: jwtConfig.expiresIn,
+    accessToken: createAccessToken(user.id, session.id, expiresIn),
+    refreshToken,
+    expiresIn,
+    refreshExpiresIn,
   };
 }
 
-module.exports = { register, login };
+function expiredSession() {
+  const error = new Error("Expired session");
+  error.status = 401;
+  error.publicMessage = "انتهت جلسة الدخول. سجّل دخولك من جديد.";
+  return error;
+}
+
+async function refreshSession(token) {
+  const hash = hashRefreshToken(token);
+  if (!hash) throw expiredSession();
+  const refreshToken = createRefreshToken();
+  const { outcome, session } = await sessions.rotateRefreshToken(hash, hashRefreshToken(refreshToken));
+  if (outcome === "concurrent") {
+    const error = new Error("Concurrent refresh");
+    error.status = 409;
+    error.publicMessage = "جاري تجديد جلسة الدخول. حاول مرة ثانية.";
+    throw error;
+  }
+  if (outcome !== "rotated") throw expiredSession();
+  const user = await userRepository.findById(session.user_id);
+  if (!user) throw expiredSession();
+  return sessionResult(user, session, refreshToken);
+}
+
+async function revokeSession({ refreshToken, accessToken } = {}) {
+  await sessions.revokeByRefreshHash(hashRefreshToken(refreshToken));
+  let payload;
+  try {
+    payload = jwt.verify(accessToken || "", jwtConfig.secret, {
+      algorithms: [jwtConfig.algorithm], issuer: jwtConfig.issuer, audience: jwtConfig.audience, ignoreExpiration: true,
+    });
+  } catch { return; }
+  if (typeof payload.sid === "string" && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(payload.sid)) {
+    await sessions.revokeById(payload.sid);
+  }
+}
+
+module.exports = { register, login, refreshSession, revokeSession };

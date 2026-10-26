@@ -9,6 +9,7 @@ module.exports = {
   secret,
   algorithm: "HS256",
   expiresIn: 15 * 60,
+  sessionExpiresIn: 7 * 24 * 60 * 60,
   issuer: "fullstack-practice",
   audience: "fullstack-practice-web",
 };

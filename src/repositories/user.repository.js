@@ -30,4 +30,9 @@ async function findForAuthentication(email) {
   return result.rows[0] || null;
 }
 
-module.exports = { findByEmail, createUser, findForAuthentication };
+async function findById(id) {
+  const result = await pool.query("SELECT id,name,email,created_at FROM public.users WHERE id=$1", [id]);
+  return result.rows[0] || null;
+}
+
+module.exports = { findByEmail, createUser, findForAuthentication, findById };
