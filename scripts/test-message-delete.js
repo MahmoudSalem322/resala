@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const app = require("../src/app");
 const pool = require("../src/config/db");
-const { createAccessToken } = require("../src/utils/token");
+const { createTestAccessToken: createAccessToken } = require("./helpers/session");
 
 async function main() {
   const server = app.listen(0, "127.0.0.1");
@@ -24,8 +24,8 @@ async function main() {
       messageIds.push(result.rows[0].id);
     }
     const url = `http://127.0.0.1:${server.address().port}/api/messages`;
-    const token = createAccessToken(userIds[0]);
-    const otherToken = createAccessToken(userIds[1]);
+    const token = await createAccessToken(userIds[0]);
+    const otherToken = await createAccessToken(userIds[1]);
     const remove = (id, session = token, headers = {}) => fetch(`${url}/${id}`, {
       method: "DELETE", headers: { ...(session ? { Cookie: `access_token=${session}` } : {}), ...headers },
     });

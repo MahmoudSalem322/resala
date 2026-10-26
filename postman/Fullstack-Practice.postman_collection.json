@@ -3,7 +3,7 @@
     "_postman_id": "f39b6073-f1cf-404e-80b2-348eee31c185",
     "name": "Fullstack Practice",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Register ثم Login ثم Current user أو Create message. التوكن محفوظ في HttpOnly Cookie ويرسل تلقائيًا عبر Cookie Jar. Current user يعيد بيانات الحساب والمدة المتبقية. لا يوجد Refresh Token."
+    "description": "الدخول يضع Access Token لمدة15 دقيقة وRefresh Token في Cookies محمية. الجلسة7 أيام كحد نهائي. Refresh يجدد ويدوّر التوكن، والخروج يبطل الجلسة. جميع الرسائل مرتبطة بالحساب، مع صفحات وبحث وترتيب وتعديل وحذف."
   },
   "auth": {
     "type": "noauth"
@@ -230,6 +230,37 @@
                   "});"
                 ]
               }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "09 - Refresh session",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/api/auth/refresh",
+            "description": "يستخدم Cookie Jar لتجديد Access Token وتدوير Refresh Token. يرجع401 عند الانتهاء أو الإبطال، و409 عند محاولة متزامنة بنفس التوكن دون إصدار جديد. نهاية الجلسة7 أيام من الدخول.",
+            "method": "POST"
+          },
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Session refreshed\", () => {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.expiresIn).to.be.above(0);",
+                  "  pm.expect(body.data.expiresIn).to.be.at.most(900);",
+                  "  pm.expect(Object.hasOwn(body.data, \"refreshToken\")).to.eql(false);",
+                  "  pm.expect(pm.response.headers.get(\"Set-Cookie\")).to.include(\"HttpOnly\");",
+                  "});"
+                ]
+              },
+              "listen": "test"
             }
           ],
           "response": []

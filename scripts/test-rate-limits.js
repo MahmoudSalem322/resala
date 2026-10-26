@@ -13,6 +13,7 @@ async function main() {
     res.status(req.body.password === "correct" ? 200 : 401).json({ success: req.body.password === "correct" });
   });
   app.post("/register", limits.register, (req, res) => res.sendStatus(201));
+  app.post("/refresh", limits.refresh, (req, res) => res.sendStatus(200));
   const authenticate = (req, res, next) => {
     if (!req.get("X-Test-User")) return res.sendStatus(401);
     req.user = { id: req.get("X-Test-User") };
@@ -59,6 +60,8 @@ async function main() {
     assert.ok(blockedByIp);
     for (let index = 0; index < 5; index++) assert.equal((await post("/register")).status, 201);
     await checkBlocked(await post("/register"), 3600);
+    for (let index = 0; index < 60; index++) assert.equal((await post("/refresh")).status, 200);
+    await checkBlocked(await post("/refresh"), 60);
     // Anonymous attempts and reads do not consume any account's sending quota.
     for (let index = 0; index < 12; index++) {
       assert.equal((await post("/messages")).status, 401);

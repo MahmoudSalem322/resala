@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const app = require("../src/app");
 const pool = require("../src/config/db");
 const config = require("../src/config/jwt");
-const { createAccessToken } = require("../src/utils/token");
+const { createTestAccessToken: createAccessToken } = require("./helpers/session");
 
 async function main() {
   const server = app.listen(0, "127.0.0.1");
@@ -21,13 +21,13 @@ async function main() {
     const get = (token, query = "") => fetch(url + query, {
       headers: token ? { Cookie: `access_token=${token}` } : {},
     });
-    const ownerToken = createAccessToken(userIds[0]);
-    const otherToken = createAccessToken(userIds[1]);
+    const ownerToken = await createAccessToken(userIds[0]);
+    const otherToken = await createAccessToken(userIds[1]);
     const anonymous = await get();
     assert.equal(anonymous.status, 401);
     assert.equal(anonymous.headers.get("cache-control"), "no-store");
     assert.equal((await get("invalid")).status, 401);
-    const expired = jwt.sign({}, config.secret, { algorithm: config.algorithm, subject: String(userIds[0]),
+    const expired = jwt.sign({ sid: jwt.decode(ownerToken).sid }, config.secret, { algorithm: config.algorithm, subject: String(userIds[0]),
       expiresIn: -1, issuer: config.issuer, audience: config.audience });
     assert.equal((await get(expired)).status, 401);
     const empty = await get(ownerToken);

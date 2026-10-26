@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const app = require("../src/app");
 const pool = require("../src/config/db");
 const config = require("../src/config/jwt");
-const { createAccessToken } = require("../src/utils/token");
+const { createTestAccessToken: createAccessToken } = require("./helpers/session");
 const { hashPassword } = require("../src/utils/password");
 
 async function main() {
@@ -30,13 +30,13 @@ async function main() {
     assert.equal((await send()).status, 401);
     assert.equal((await send("invalid")).status, 401);
     assert.equal((await send("%malformed")).status, 401);
-    const sign = (options) => jwt.sign({}, config.secret, {
+    const token = await createAccessToken(userId);
+    const sign = (options) => jwt.sign({ sid: jwt.decode(token).sid }, config.secret, {
       algorithm: config.algorithm, subject: String(userId), expiresIn: 60,
       issuer: config.issuer, audience: config.audience, ...options,
     });
     assert.equal((await send(sign({ expiresIn: -1 }))).status, 401);
     assert.equal((await send(sign({ audience: "wrong" }))).status, 401);
-    const token = createAccessToken(userId);
     assert.equal((await send(token, { message: " " })).status, 400);
     assert.equal((await send(token, { message: "x".repeat(5001) })).status, 400);
     const created = await send(token);
@@ -94,6 +94,7 @@ async function main() {
     assert.equal(logout.status, 200);
     assert.match(logout.headers.get("set-cookie"), /access_token=;/);
     assert.match(logout.headers.get("set-cookie"), /Expires=Thu, 01 Jan 1970/);
+    assert.equal((await currentUser(cookieToken)).status, 401);
     assert.equal((await send()).status, 401);
     assert.equal((await currentUser()).status, 401);
     await pool.query("DELETE FROM public.messages WHERE user_id = $1", [userId]);
