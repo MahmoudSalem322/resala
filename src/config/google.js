@@ -14,7 +14,7 @@ function frontendOrigin() {
 function googleConfig() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || (process.env.RENDER_EXTERNAL_URL && process.env.RENDER_EXTERNAL_URL.replace(/\/$/, "") + "/api/auth/google/callback");
   try {
     if (!clientId || !clientSecret || !redirectUri) throw new Error("Missing Google configuration");
     const url = new URL(redirectUri);
