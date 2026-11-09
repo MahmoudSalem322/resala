@@ -34,9 +34,9 @@ async function register({ name, email, password }) {
 
 async function login({ email, password }, previousTokens = {}) {
   const user = await userRepository.findForAuthentication(email);
-  const matches = await verifyPassword(password, user ? user.password_hash : DUMMY_PASSWORD_HASH);
+  const matches = await verifyPassword(password, user?.password_hash || DUMMY_PASSWORD_HASH);
 
-  if (!user || !matches) {
+  if (!user?.password_hash || !matches) {
     const error = new Error("Invalid login credentials.");
     error.code = "INVALID_CREDENTIALS";
     error.status = 401;
@@ -44,10 +44,30 @@ async function login({ email, password }, previousTokens = {}) {
     throw error;
   }
 
+  return createUserSession(user, previousTokens);
+}
+
+async function createUserSession(user, previousTokens = {}, previousSessionId = null) {
   await revokeSession(previousTokens);
+  // Google callbacks lack Strict cookies; this id comes only from the saved browser-bound attempt.
+  if (previousSessionId) await sessions.revokeById(previousSessionId);
   const refreshToken = createRefreshToken();
   const session = await sessions.createSession(user.id, hashRefreshToken(refreshToken));
   return sessionResult(user, session, refreshToken);
+}
+
+async function sessionToReplace({ refreshToken, accessToken } = {}) {
+  const refreshSessionId = await sessions.findIdByRefreshHash(hashRefreshToken(refreshToken));
+  if (refreshSessionId) return refreshSessionId;
+  try {
+    const payload = jwt.verify(accessToken || "", jwtConfig.secret, {
+      algorithms: [jwtConfig.algorithm], issuer: jwtConfig.issuer, audience: jwtConfig.audience, ignoreExpiration: true,
+    });
+    if (typeof payload.sid === "string" && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(payload.sid)) {
+      return payload.sid;
+    }
+  } catch { return null; }
+  return null;
 }
 
 function sessionResult(user, session, refreshToken) {
@@ -105,4 +125,4 @@ async function revokeSession({ refreshToken, accessToken } = {}) {
   }
 }
 
-module.exports = { register, login, refreshSession, revokeSession };
+module.exports = { register, login, refreshSession, revokeSession, createUserSession, sessionToReplace };

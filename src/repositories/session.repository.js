@@ -55,4 +55,10 @@ async function revokeById(id) {
   if (id) await pool.query("UPDATE auth_sessions SET revoked_at=COALESCE(revoked_at,NOW()) WHERE id=$1", [id]);
 }
 
-module.exports = { createSession, rotateRefreshToken, revokeByRefreshHash, revokeById };
+async function findIdByRefreshHash(hash) {
+  if (!hash) return null;
+  const result = await pool.query("SELECT session_id FROM refresh_tokens WHERE token_hash=$1", [hash]);
+  return result.rows[0]?.session_id || null;
+}
+
+module.exports = { createSession, rotateRefreshToken, revokeByRefreshHash, revokeById, findIdByRefreshHash };

@@ -4,8 +4,12 @@ const validateRegister = require("../middleware/validate-register");
 const validateLogin = require("../middleware/validate-login");
 const requireAuth = require("../middleware/require-auth");
 const limits = require("../config/rate-limits");
+const googleAuth = require("../controllers/google-auth.controller");
 
 const router = express.Router();
+
+router.get("/google", limits.google, googleAuth.start);
+router.get("/google/callback", limits.google, googleAuth.callback);
 
 router.post("/register", limits.register, validateRegister, authController.register);
 router.post("/login", limits.loginIp, validateLogin, limits.loginAccount, authController.login);

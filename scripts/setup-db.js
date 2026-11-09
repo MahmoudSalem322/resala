@@ -7,6 +7,12 @@ async function setupDatabase() {
   const adminPool = new Pool({ database: "postgres", connectionTimeoutMillis: 5000 });
 
   try {
+    if (process.env.DATABASE_URL) {
+      const schema = await fs.readFile(path.resolve(__dirname, '../database/schema.sql'), 'utf8');
+      await pool.query(schema);
+      console.log('Remote database schema ready.');
+      return;
+    }
     const database = process.env.PGDATABASE;
     if (!database || !process.env.PGPASSWORD) {
       throw new Error("Set PGDATABASE and PGPASSWORD in the backend .env file first.");

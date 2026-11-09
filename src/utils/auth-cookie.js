@@ -2,7 +2,7 @@ const cookieName = "access_token";
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "strict",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
   path: "/api",
 };
 
@@ -30,4 +30,4 @@ function clearSessionCookies(res) {
 }
 function readRefreshCookie(req) { return readCookie(req, "refresh_token"); }
 
-module.exports = { readAuthCookie, setSessionCookies, clearSessionCookies, readRefreshCookie };
+module.exports = { readCookie, readAuthCookie, setSessionCookies, clearSessionCookies, readRefreshCookie };

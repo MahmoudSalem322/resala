@@ -23,6 +23,7 @@ function createRateLimiters({ loginWindowMs = 15 * MINUTE, registerWindowMs = 60
   };
 
   return {
+    google: rateLimit({ ...common, identifier: "google-oauth-ip", windowMs: MINUTE, limit: 60 }),
     loginIp: rateLimit({ ...common, identifier: "login-ip", windowMs: loginWindowMs, limit: 20, skipSuccessfulRequests: true }),
     loginAccount: rateLimit({
       ...common, identifier: "login-account-ip", windowMs: loginWindowMs, limit: 5, skipSuccessfulRequests: true,

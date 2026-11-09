@@ -4,6 +4,7 @@ const { Pool } = require("pg");
 // pg reads the PG* connection settings from process.env.
 // One shared pool will be used by the repositories later.
 const pool = new Pool({
+  ...(process.env.DATABASE_URL ? { connectionString: process.env.DATABASE_URL } : {}),
   connectionTimeoutMillis: 5000,
 });
 
